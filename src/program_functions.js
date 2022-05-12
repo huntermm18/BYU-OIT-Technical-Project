@@ -2,10 +2,14 @@ const inquirer = require('inquirer');
 const ratings = require('@mtucourses/rate-my-professors').default;
 const api_calls = require('./api_calls')
 const database_functions = require('./database_functions')
+const UUID = require("uuid");
+const { exec } = require("child_process");
 
 
 class rmpCourse {
-    constructor(classTitle, instructor, instructionMode, days, classtime, building, availableSeats, totalEnrolled, waitList) {
+    constructor(className, classTitle, instructor, instructionMode, days, classtime, building, availableSeats, totalEnrolled, waitList) {
+        this.uuid = UUID.v4()
+        this.className = className
         this.classTitle = classTitle
         this.instructor = instructor
         this.instruction_mode = instructionMode
@@ -80,7 +84,6 @@ async function searchCourses() {
             yearTerm = year + '5'
             break
     }
-    console.log('yearTerm = ' + yearTerm) // todo remove me
 
     let teachingArea = await prompt('Enter a teaching area (ex. C S, HIST, etc.) Don\'t forget a space if it is needed')
     teachingArea = teachingArea.toUpperCase() // set the user input to upper case
@@ -101,26 +104,38 @@ async function searchCourses() {
 async function addRMPDataToClasses(classes) {
     const byuRMPID = 'U2Nob29sLTEzNQ=='// Rate My Professor  university ID for BYU (As of 5/11/2022)
     let rmpClasses = []
-    let rmpClass
 
     for (let i = 0; i < classes.length; i++) {
-        let c = classes[i]
-        rmpClass = new rmpCourse(c.classTitle, c.instructor, c.instruction_mode, c.days, c.classtime, c.building, c.availableSeats, c.totalEnrolled, c.waitList)
-        const teachers = await ratings.searchTeacher(c.instructor, byuRMPID);
-        if (teachers[0]) {
-            const teacher = await ratings.getTeacher(teachers[0].id);
-            rmpClass.avgDifficulty = teacher.avgDifficulty
-            rmpClass.avgRating = teacher.avgRating
-            rmpClass.numRatings = teacher.numRatings
+        try{
+            let c = classes[i]
+            let rmpClass = new rmpCourse(c.className, c.classTitle, c.instructor, c.instruction_mode,
+                c.days, c.classtime, c.building, c.availableSeats, c.totalEnrolled, c.waitList)
+
+            // take the first two words (omitting the middle name if there is one). This format is better for the search
+            const instructorSearchName = c.instructor.split(' ').slice(0,2).join(' ')
+            const teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
+            if (teachers[0]) {
+                const teacher = await ratings.getTeacher(teachers[0].id);
+                rmpClass.avgDifficulty = teacher.avgDifficulty
+                rmpClass.avgRating = teacher.avgRating
+                rmpClass.numRatings = teacher.numRatings
+            }
+            rmpClasses.push(rmpClass)
+        } catch (e) {
+            if (e.message.includes('EADDRINUSE')) {
+                console.log('EADDRINUSE error caught. Running command \'taskkill /im node.exe /F\' to attempt to work around.')
+                exec("taskkill /im node.exe /F") // command to hopefully fix the EADDRINUSE error
+                return addRMPDataToClasses(classes) // attempt to restart the function
+            }
         }
-        rmpClasses.push(rmpClass)
+
     }
 
     return rmpClasses
 }
 
 async function saveClasses(rmpClasses, userBYUID) {
-    const promptMessage = 'Enter the index of a class you would like to save or leave blank to continue'
+    const promptMessage = 'Enter the index of a class you would like to save or leave blank to return to the menu'
     let index = await prompt(promptMessage)
     while (index === 0 || index) {
         index = parseInt(index)
@@ -129,34 +144,46 @@ async function saveClasses(rmpClasses, userBYUID) {
             index = await prompt(promptMessage)
             continue
         }
-        const added = await database_functions.addRmpClassToDatabase(rmpClasses[index], userBYUID)
-        if (added) {
-            console.log(`Added class at index ${index} to the database`)
-        }
-        else {
-            console.log(`error adding class to database`)
-        }
+        await database_functions.addRmpClassToDatabase(rmpClasses[index], userBYUID)
         index = await prompt(promptMessage)
     }
 }
 
 async function viewSavedCourses(userBYUID) {
-    let savedClasses = await database_functions.getSavedRmpClasses(userBYUID)
-    console.table(savedClasses.rows)
+    const savedClasses = await database_functions.getSavedRmpClasses(userBYUID)
+    console.table(savedClasses.rows, ['CLASS_NAME', 'CLASS_TITLE', 'INSTRUCTOR', 'INSTRUCTION_MODE',
+        'DAYS', 'CLASSTIME', 'BUILDING', 'AVAILABLE_SEATS', 'TOTAL_ENROLLED', 'WAITLIST', 'AVG_DIFFICULTY',
+        'AVG_RATING', 'NUM_RATINGS'])
+    return savedClasses.rows
 
-    let savedClassesFormatted = []
-    for (let i = 0; i < savedClasses.rows.length; i++) {
-        let c = savedClasses.rows[i]
-        const rmpClass = new rmpCourse(c.classTitle, c.instructor, c.instruction_mode, c.days, c.classtime, c.building, c.availableSeats, c.totalEnrolled, c.waitList)
-        rmpClass.avgDifficulty = c.avgDifficulty
-        rmpClass.avgRating = c.avgRating
-        rmpClass.numRatings = c.numRatings
-        savedClassesFormatted.push(rmpClass)
+}
+
+async function removeSavedCourses(userBYUID, savedClasses) {
+    const promptMessage = 'Enter the index of a class you would like to remove or leave blank to return to the menu'
+    let index = await prompt(promptMessage)
+    while (index === 0 || index) {
+        index = parseInt(index)
+        if (!(index >= 0 && index < savedClasses.length)) {
+            console.log('Not a valid index')
+            index = await prompt(promptMessage)
+            continue
+        }
+        const removed = await database_functions.removeRmpClassFromDatabase(savedClasses[index].SAVED_ID)
+        if (removed) {
+            console.log(`Removed class '${savedClasses[index].CLASS_TITLE}' from the database`)
+
+            // print the new table and start the function over again
+            const newSavedClasses = await viewSavedCourses(userBYUID)
+            return removeSavedCourses(userBYUID, newSavedClasses)
+        }
+        else {
+            console.log(`error removing class from database`)
+        }
+        index = await prompt(promptMessage)
     }
-    console.table(savedClassesFormatted)
 }
 
 
 
 
-module.exports = {login, searchCourses, viewSavedCourses, addRMPDataToClasses, saveClasses}
+module.exports = {login, searchCourses, viewSavedCourses, addRMPDataToClasses, saveClasses, removeSavedCourses}

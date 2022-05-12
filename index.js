@@ -17,7 +17,8 @@ async function main() {
             await pf.saveClasses(rmpClasses, userBYUID)
         }
         else if (choice === 2) {
-            await pf.viewSavedCourses(userBYUID)
+            const savedClasses = await pf.viewSavedCourses(userBYUID)
+            await pf.removeSavedCourses(userBYUID, savedClasses)
         }
         choice = await promptMenu()
     }

@@ -11,6 +11,7 @@
   "dependencies": {
     "@mtucourses/rate-my-professors": "^2.0.1",
     "axios": "^0.27.2",
+    "child_process": "^1.0.2",
     "inquirer": "^8.2.4",
     "oracledb": "^5.3.0",
     "uuid": "^8.3.2"
