@@ -7,7 +7,7 @@ const { exec } = require("child_process");
 
 
 class rmpCourse {
-    constructor(className, classTitle, instructor, instructionMode, days, classtime, building, availableSeats, totalEnrolled, waitList) {
+    constructor(className, classTitle, instructor, instructionMode, days, classtime, building, availableSeats, totalEnrolled, waitlisted) {
         this.uuid = UUID.v4()
         this.className = className
         this.classTitle = classTitle
@@ -18,10 +18,21 @@ class rmpCourse {
         this.building = building
         this.availableSeats = availableSeats
         this.totalEnrolled = totalEnrolled
-        this.waitList = waitList
+        this.waitlisted = waitlisted
         this.avgDifficulty = null
         this.avgRating = null
         this.numRatings = null
+
+        if (this.days === null) {
+            this.days = 'N/A'
+        }
+        if (this.classtime === null) {
+            this.classtime = 'N/A'
+        }
+        if (this.building === null) {
+            this.building = 'N/A'
+        }
+
     }
 }
 
@@ -38,15 +49,15 @@ async function prompt(message) {
 
 async function login() {
     // Get BYU ID and WSO2
-    let byuID = await prompt('Enter your BYU-ID (ex. 123456789)')
+    console.clear()
+    printWelcome()
+    let byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
     if (!byuID) { // fixme for testing
         byuID = '083814923'
-        console.log('using test byuID')
     }
-    let token = await prompt('Enter your WSO2 token')
+    let token = await prompt('Enter your WSO2 token:')
     if (!token) { // fixme for testing
         token = 'b995ce8ba755b18724b812af0785c41'
-        console.log('using test wso2 token')
     }
     const passedTests = await api_calls.testAPIs(byuID, token)
     if (!passedTests) {
@@ -58,9 +69,14 @@ async function login() {
     return byuID
 }
 
+function printWelcome() {
+    console.log('Welcome to the BYU course searcher with Rate-My-Professor data')
+}
+
+
 async function searchCourses() {
     let yearTerm = ''
-    let year = await prompt('Enter a year')
+    let year = await prompt('Enter a year:')
     if (year === '') {year = 2022} // todo for testing. Blank will throw an error
     const answer = await inquirer.prompt([{
         name: 'response',
@@ -85,11 +101,11 @@ async function searchCourses() {
             break
     }
 
-    let teachingArea = await prompt('Enter a teaching area (ex. C S, HIST, etc.) Don\'t forget a space if it is needed')
+    let teachingArea = await prompt('Enter a teaching area (ex. C S, HIST, etc.) Don\'t forget a space if it is needed:')
     teachingArea = teachingArea.toUpperCase() // set the user input to upper case
     if (teachingArea === 'CS') {teachingArea = 'C S'} // in case the space was forgotten in C S
     else if (teachingArea === '') {teachingArea = 'C S'} // todo for testing. note: a blank will cause an error
-    let courseNumber = await prompt('Enter a course number (ex. 252, 101, etc.)')
+    let courseNumber = await prompt('Enter a course number (ex. 252, 101, etc.):')
     if (courseNumber === '') {courseNumber = '235'} // todo for testing. Blank will cause an error
 
     let classes = await api_calls.getClasses(yearTerm, teachingArea, courseNumber)
@@ -109,7 +125,7 @@ async function addRMPDataToClasses(classes) {
         try{
             let c = classes[i]
             let rmpClass = new rmpCourse(c.className, c.classTitle, c.instructor, c.instruction_mode,
-                c.days, c.classtime, c.building, c.availableSeats, c.totalEnrolled, c.waitList)
+                c.days, c.classtime, c.building, c.availableSeats, c.totalEnrolled, c.waitlisted)
 
             // take the first two words (omitting the middle name if there is one). This format is better for the search
             const instructorSearchName = c.instructor.split(' ').slice(0,2).join(' ')
@@ -170,6 +186,7 @@ async function removeSavedCourses(userBYUID, savedClasses) {
         }
         const removed = await database_functions.removeRmpClassFromDatabase(savedClasses[index].SAVED_ID)
         if (removed) {
+            console.clear()
             console.log(`Removed class '${savedClasses[index].CLASS_TITLE}' from the database`)
 
             // print the new table and start the function over again

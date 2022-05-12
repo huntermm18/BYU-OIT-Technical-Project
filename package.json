@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@mtucourses/rate-my-professors": "^2.0.1",
+    "aws-sdk": "^2.1134.0",
     "axios": "^0.27.2",
     "child_process": "^1.0.2",
     "inquirer": "^8.2.4",

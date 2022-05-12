@@ -1,11 +1,13 @@
 const inquirer = require("inquirer");
 const pf = require('./src/program_functions')
+const df = require('./src/database_functions')
 
 main().catch((e) => {
     console.log(e)
 })
 
 async function main() {
+    await df.getOracleCredentials(0)
     const userBYUID = await pf.login()
     let choice = await promptMenu()
 
@@ -13,7 +15,10 @@ async function main() {
         if (choice === 1) {
             let classes = await pf.searchCourses()
             let rmpClasses = await pf.addRMPDataToClasses(classes)
-            console.table(rmpClasses)
+            console.clear()
+            console.table(rmpClasses, ['className', 'classTitle', 'instructor', 'avgRating', 'avgDifficulty',
+                'instruction_mode', 'days', 'classtime', 'building', 'availableSeats',
+                'totalEnrolled', 'waitlisted', 'numRatings'])
             await pf.saveClasses(rmpClasses, userBYUID)
         }
         else if (choice === 2) {
@@ -28,6 +33,7 @@ async function main() {
 
 
 async function promptMenu() {
+    console.clear()
     const answer = await inquirer.prompt([{
         name: 'response',
         type: 'list',
