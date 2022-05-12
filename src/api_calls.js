@@ -4,7 +4,7 @@ const personOptions = {
     url: '',
     method: 'GET',
     headers: {
-        Authorization: '', // gets set in testAPIs
+        Authorization: '', // gets set in testAPIs when user logs in
     }
 }
 
@@ -12,7 +12,7 @@ const classScheduleOptions = {
     url: '',
     method: 'GET',
     headers: {
-        Authorization: '', // gets set in testAPIs
+        Authorization: '', // gets set in testAPIsw hen user logs in
     }
 }
 
@@ -25,7 +25,9 @@ async function testAPIs(byuID, token) {
     try {
         await axios(personOptions)
     } catch (e) {
-        return false
+        console.log('Please make sure you are subscribed to both' +
+            ' the AcademicClassScheduleClassSchedule - v1 API and the Persons - v3 API and try again')
+        process.exit();
     }
 
     classScheduleOptions.url = 'https://api.byu.edu:443/domains/legacy/academic/classschedule/classschedule/v1/20225/C%20S/ALL'
@@ -33,10 +35,12 @@ async function testAPIs(byuID, token) {
     try {
         await axios(classScheduleOptions)
     } catch (e) {
-        return false
+        console.log('Please make sure you are subscribed to both' +
+            ' the AcademicClassScheduleClassSchedule - v1 API and the Persons - v3 API and try again')
+        process.exit();
     }
-    return true
 }
+
 
 async function getClasses(yearTerm, teachingArea, courseNumber) {
     classScheduleOptions.url = `https://api.byu.edu:443/domains/legacy/academic/classschedule/classschedule/v1/${yearTerm}/${teachingArea}/ALL`

@@ -48,24 +48,18 @@ async function prompt(message) {
 }
 
 async function login() {
-    // Get BYU ID and WSO2
     console.clear()
     printWelcome()
+
+    // Get BYU ID and WSO2
     let byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
-    if (!byuID) { // fixme for testing
-        byuID = '083814923'
-    }
+    if (!byuID) {byuID = '083814923'} // fixme for testing
     let token = await prompt('Enter your WSO2 token:')
-    if (!token) { // fixme for testing
-        token = 'b995ce8ba755b18724b812af0785c41'
-    }
-    const passedTests = await api_calls.testAPIs(byuID, token)
-    if (!passedTests) {
-        // API testing failed
-        console.log('Please make sure you are subscribed to both' +
-            ' the AcademicClassScheduleClassSchedule - v1 API and the Persons - v3 API and try again')
-        process.exit();
-    }
+    if (!token) {token = 'b995ce8ba755b18724b812af0785c41'} // fixme for testing
+
+    // Test if user is subscribed to the proper APIs
+    await api_calls.testAPIs(byuID, token)
+
     return byuID
 }
 
@@ -144,11 +138,10 @@ async function addRMPDataToClasses(classes) {
                 return addRMPDataToClasses(classes) // attempt to restart the function
             }
         }
-
     }
-
     return rmpClasses
 }
+
 
 async function saveClasses(rmpClasses, userBYUID) {
     const promptMessage = 'Enter the index of a class you would like to save or leave blank to return to the menu'
@@ -165,6 +158,7 @@ async function saveClasses(rmpClasses, userBYUID) {
     }
 }
 
+
 async function viewSavedCourses(userBYUID) {
     const savedClasses = await database_functions.getSavedRmpClasses(userBYUID)
     console.table(savedClasses.rows, ['CLASS_NAME', 'CLASS_TITLE', 'INSTRUCTOR', 'INSTRUCTION_MODE',
@@ -173,6 +167,7 @@ async function viewSavedCourses(userBYUID) {
     return savedClasses.rows
 
 }
+
 
 async function removeSavedCourses(userBYUID, savedClasses) {
     const promptMessage = 'Enter the index of a class you would like to remove or leave blank to return to the menu'
@@ -199,8 +194,6 @@ async function removeSavedCourses(userBYUID, savedClasses) {
         index = await prompt(promptMessage)
     }
 }
-
-
 
 
 module.exports = {login, searchCourses, viewSavedCourses, addRMPDataToClasses, saveClasses, removeSavedCourses}

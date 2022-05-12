@@ -1,7 +1,5 @@
 const oracle = require('oracledb')
 const AWS = require('aws-sdk')
-const UUID = require('uuid')
-//const program_functions = require("./program_functions");
 
 
 //Oracle DB Parameters
@@ -19,7 +17,6 @@ let awsParameters = {
     Names: [`/hunter-madsen-technical-challenge/dev/ORACLEUSER`, `/hunter-madsen-technical-challenge/dev/ORACLEPASS`],
     WithDecryption: true
 }
-
 
 
 // Check if user is connected to AWS and set Oracle parameters
@@ -46,6 +43,28 @@ const getOracleCredentials = async function (count) {
 }
 
 
+// Check if user is connected to the proper VPN
+async function testOracleConnectivity() {
+    try {
+        console.log(`Checking that your VPN is on -- please wait`)
+        const conn = await oracle.getConnection(oracleParameters)
+        await conn.execute(`SELECT * FROM DUAL`)
+        await conn.close()
+    } catch(error) {
+        //12170 is the error the database returns when not connected to VPN
+        if (error.errorNum  === 12170){
+            console.error('It appears you are not connected to your VPN')
+            console.error('Please connect to your VPN and try again')
+            process.exit()
+        }
+        else {
+            console.log('The following error just occurred: ', error)
+            process.exit()
+        }
+    }
+}
+
+
 async function addRmpClassToDatabase(rmpClass, userBYUID) {
     try {
         const conn = await oracle.getConnection(oracleParameters)
@@ -64,7 +83,7 @@ async function addRmpClassToDatabase(rmpClass, userBYUID) {
             console.log('Class already added')
         }
         else if (e.message.includes('table or view does not exist')) {
-            await creatTableInDatabase()
+            await createTableInDatabase()
             return addRmpClassToDatabase(rmpClass, userBYUID)
         }
         else {
@@ -73,25 +92,27 @@ async function addRmpClassToDatabase(rmpClass, userBYUID) {
     }
 }
 
+
 async function getSavedRmpClasses(userBYUID) {
     try {
         const conn = await oracle.getConnection(oracleParameters)
-        const executeStatement = `SELECT * FROM OIT#MHM62.SAVED_RMP_CLASSES WHERE ASSOSIATED_USER_BYUID = '${userBYUID}'`
-        let result = await conn.execute(executeStatement)
+        let result = await conn.execute(`SELECT * FROM OIT#MHM62.SAVED_RMP_CLASSES WHERE ASSOSIATED_USER_BYUID = :userBYUID`, [userBYUID])
         await conn.close()
         return result
     } catch (e) {
+        await testOracleConnectivity()
         console.log(e)
     }
 }
+
 
 async function removeRmpClassFromDatabase(uuid) {
     try {
         const conn = await oracle.getConnection(oracleParameters)
         await conn.execute(`DELETE FROM OIT#MHM62.SAVED_RMP_CLASSES WHERE SAVED_ID = :uuid`, [uuid])
-
         await conn.close()
     } catch (e) {
+        await testOracleConnectivity()
         console.log(e)
         return false
     }
@@ -105,14 +126,17 @@ async function clearAndRebuildDatabase() {
         const conn = await oracle.getConnection(oracleParameters)
         await conn.execute('DROP TABLE SAVED_RMP_CLASSES')
         await conn.close()
-        await creatTableInDatabase()
+        await createTableInDatabase()
         console.log('Database cleared SAVED_RMP_CLASSES')
     } catch (e) {
+        await testOracleConnectivity()
         console.log(e)
     }
 }
 
-async function creatTableInDatabase() {
+
+async function createTableInDatabase() {
+    await testOracleConnectivity()
     try {
         const conn = await oracle.getConnection(oracleParameters)
         await conn.execute('CREATE TABLE OIT#MHM62.SAVED_RMP_CLASSES' +
@@ -137,9 +161,10 @@ async function creatTableInDatabase() {
         console.log('Table added to database')
     } catch (e) {
         console.log(e)
+        await testOracleConnectivity()
     }
 }
 
 
 module.exports = {addRmpClassToDatabase, getSavedRmpClasses, removeRmpClassFromDatabase,
-    clearAndRebuildDatabase, creatTableInDatabase, getOracleCredentials}
+    clearAndRebuildDatabase, getOracleCredentials, testOracleConnectivity}

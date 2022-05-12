@@ -2,17 +2,26 @@ const inquirer = require("inquirer");
 const pf = require('./src/program_functions')
 const df = require('./src/database_functions')
 
+
 main().catch((e) => {
     console.log(e)
 })
 
 async function main() {
+    // Test AWS connection and use to set Oracle credentials
     await df.getOracleCredentials(0)
-    const userBYUID = await pf.login()
-    let choice = await promptMenu()
 
+    // Tests to make sure connected to database
+    await df.testOracleConnectivity()
+
+    // Login and save user's BYU-ID
+    const userBYUID = await pf.login()
+
+    // Open menu and loop until user exits
+    let choice = await promptMenu()
     while (choice !== 3) {
         if (choice === 1) {
+            // Search courses option
             let classes = await pf.searchCourses()
             let rmpClasses = await pf.addRMPDataToClasses(classes)
             console.clear()
@@ -22,13 +31,12 @@ async function main() {
             await pf.saveClasses(rmpClasses, userBYUID)
         }
         else if (choice === 2) {
+            // View saved courses option
             const savedClasses = await pf.viewSavedCourses(userBYUID)
             await pf.removeSavedCourses(userBYUID, savedClasses)
         }
         choice = await promptMenu()
     }
-
-    console.log('End of program reached') // fixme for testing
 }
 
 
@@ -48,6 +56,7 @@ async function promptMenu() {
         case '2) View Saved Courses':
             return 2
         case '3) Exit Program':
+            console.clear()
             console.log('Thanks for using')
             process.exit()
     }
