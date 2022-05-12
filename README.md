@@ -61,3 +61,4 @@ In order to use this program you must connect to BYU's AWS. To do so:
 2. You can enter the table indexes (one at a time) of any course you would like to remove from the list, or just press enter to return to the menu
 
 
+git remote set-url origin https://github.com/byu-oit/hunter-madsen-technical-challenge.git
