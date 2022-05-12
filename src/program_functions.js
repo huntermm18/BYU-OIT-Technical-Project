@@ -87,12 +87,12 @@ async function searchCourses() {
     if (teachingArea === 'CS') {teachingArea = 'C S'} // in case the space was forgotten in C S
     else if (teachingArea === '') {teachingArea = 'C S'} // todo for testing. note: a blank will cause an error
     let courseNumber = await prompt('Enter a course number (ex. 252, 101, etc.)')
-    if (courseNumber === '') {courseNumber = '142'} // todo for testing. Blank will cause an error
+    if (courseNumber === '') {courseNumber = '235'} // todo for testing. Blank will cause an error
 
     let classes = await api_calls.getClasses(yearTerm, teachingArea, courseNumber)
     if (!classes.length) {
         console.log('No classes found. Check to make sure you entered a valid teaching area and course number')
-        return null
+        return searchCourses()
     }
 
     return classes // return all classes found from the search
@@ -142,7 +142,18 @@ async function saveClasses(rmpClasses, userBYUID) {
 
 async function viewSavedCourses(userBYUID) {
     let savedClasses = await database_functions.getSavedRmpClasses(userBYUID)
-    console.table(savedClasses)
+    console.table(savedClasses.rows)
+
+    let savedClassesFormatted = []
+    for (let i = 0; i < savedClasses.rows.length; i++) {
+        let c = savedClasses.rows[i]
+        const rmpClass = new rmpCourse(c.classTitle, c.instructor, c.instruction_mode, c.days, c.classtime, c.building, c.availableSeats, c.totalEnrolled, c.waitList)
+        rmpClass.avgDifficulty = c.avgDifficulty
+        rmpClass.avgRating = c.avgRating
+        rmpClass.numRatings = c.numRatings
+        savedClassesFormatted.push(rmpClass)
+    }
+    console.table(savedClassesFormatted)
 }
 
 
