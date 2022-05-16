@@ -35,13 +35,13 @@ async function main() {
             const savedClasses = await pf.viewSavedCourses(userBYUID)
             await pf.removeSavedCourses(userBYUID, savedClasses)
         }
+        console.clear()
         choice = await promptMenu()
     }
 }
 
 
 async function promptMenu() {
-    console.clear()
     const answer = await inquirer.prompt([{
         name: 'response',
         type: 'list',

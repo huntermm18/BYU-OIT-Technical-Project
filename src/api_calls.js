@@ -23,7 +23,7 @@ async function testAPIs(byuID, token) {
     personOptions.url = `https://api.byu.edu:443/byuapi/persons/v3/${byuID}`
     personOptions.headers.Authorization = `Bearer ${token}`
     try {
-        await axios(personOptions)
+        const response = await axios(personOptions)
     } catch (e) {
         console.log('Please make sure you are subscribed to both' +
             ' the AcademicClassScheduleClassSchedule - v1 API and the Persons - v3 API and try again')

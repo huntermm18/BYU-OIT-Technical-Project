@@ -100,6 +100,10 @@ async function getSavedRmpClasses(userBYUID) {
         await conn.close()
         return result
     } catch (e) {
+        if (e.message.includes('table or view does not exist')) {
+            await createTableInDatabase()
+            return getSavedRmpClasses(userBYUID)
+        }
         await testOracleConnectivity()
         console.log(e)
     }
@@ -123,6 +127,7 @@ async function removeRmpClassFromDatabase(uuid) {
 async function clearAndRebuildDatabase() {
     // Development use only
     try {
+        await getOracleCredentials(1)
         const conn = await oracle.getConnection(oracleParameters)
         await conn.execute('DROP TABLE SAVED_RMP_CLASSES')
         await conn.close()
@@ -136,7 +141,6 @@ async function clearAndRebuildDatabase() {
 
 
 async function createTableInDatabase() {
-    await testOracleConnectivity()
     try {
         const conn = await oracle.getConnection(oracleParameters)
         await conn.execute('CREATE TABLE OIT#MHM62.SAVED_RMP_CLASSES' +
@@ -153,8 +157,8 @@ async function createTableInDatabase() {
             '    AVAILABLE_SEATS INTEGER,' +
             '    TOTAL_ENROLLED INTEGER,' +
             '    WAITLIST INTEGER,' +
-            '    AVG_DIFFICULTY NUMBER,' +
-            '    AVG_RATING NUMBER,' +
+            '    AVG_DIFFICULTY NUMBER(1),' +
+            '    AVG_RATING NUMBER(1),' +
             '    NUM_RATINGS INTEGER' +
             ')')
         await conn.close()
