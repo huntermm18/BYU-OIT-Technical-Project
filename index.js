@@ -34,6 +34,12 @@ async function main() {
         if (choice === 1) {
             // Search courses option
             let classes = await pf.searchCourses()
+            if (!classes) {
+                // User opted to return to the main menu
+                console.clear()
+                choice = await promptMenu()
+                continue
+            }
             let rmpClasses = await pf.addRMPDataToClasses(classes)
             console.clear()
             if (rmpClasses.length > 0) {

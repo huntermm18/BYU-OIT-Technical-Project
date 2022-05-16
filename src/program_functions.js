@@ -73,16 +73,19 @@ async function login() {
     console.clear()
     printWelcome()
 
-    // Get BYU ID and WSO2
-    let byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
-    if (!byuID) {byuID = '083814923'} // fixme for testing
-    let token = await prompt('Enter your WSO2 token:')
-    if (!token) {token = 'b995ce8ba755b18724b812af0785c41'} // fixme for testing
+    let byuID = ''
+    let token = ''
 
-    // Test if user is subscribed to the proper APIs and get user's name
-    const userFirstName = await api_calls.testAPIs(byuID, token)
-    console.clear()
-    console.log(`Welcome ${userFirstName}`)
+    // Get BYU ID and WSO2
+    while(!byuID) {
+        byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
+    }
+    while (!token) {
+        token = await prompt('Enter your WSO2 token:')
+    }
+
+    // Test if user is subscribed to the proper APIs
+    await api_calls.testAPIs(byuID, token)
 
     return byuID
 }
@@ -106,8 +109,8 @@ async function searchCourses() {
 
     // prompt the user to select a year
     let year = await selectYear()
-    if (year === restartText) {
-        return searchCourses()
+    if (!year) {
+        return null
     }
 
     // prompt the user to select a term
@@ -171,7 +174,7 @@ async function addRMPDataToClasses(classes) {
             let teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
             if (teachers[0]) {
                 const teacher = await ratings.getTeacher(teachers[0].id);
-                rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty219984338
+                rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty
                 rmpClass.AVG_RATING = teacher.avgRating
                 rmpClass.NUM_RATINGS = teacher.numRatings
             }
@@ -289,9 +292,9 @@ async function selectYear() {
     let answer = await inquirer.prompt([{
         name: 'response',
         type: 'list',
-        pageSize: 4,
+        pageSize: 5,
         message: 'Select a year',
-        choices: [currYear-1, currYear, currYear+1, 'Enter another year']
+        choices: [currYear-1, currYear, currYear+1, 'Enter another year', 'Return to Main Menu']
     }])
     if (answer.response === 'Enter another year') {
         // User chooses to enter a year manually
@@ -301,6 +304,9 @@ async function selectYear() {
             return currYear // Default value. Blank will throw an error
         }
         return year
+    }
+    else if (answer.response === 'Return to Main Menu') {
+        return null
     }
     else {
         return answer.response
@@ -319,7 +325,7 @@ async function selectTerm() {
         type: 'list',
         pageSize: 5,
         message: 'Select a semester',
-        choices: [restartText, 'Winter', 'Spring', 'Summer', 'Fall']
+        choices: ['Winter', 'Spring', 'Summer', 'Fall', restartText]
     }])
     // Use responses to set the yearTerm variable needed for the api call
     switch (answer.response) {
@@ -344,8 +350,8 @@ async function selectTerm() {
  */
 async function selectTeachingArea() {
     const teachingAreasArr = [
-        restartText,
         'Enter manually',
+        restartText,
         'A HTG',
         'ACC',
         'AEROS',
