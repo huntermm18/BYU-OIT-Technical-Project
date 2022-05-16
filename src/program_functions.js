@@ -12,6 +12,8 @@ const database_functions = require('./database_functions')
 const UUID = require("uuid");
 const { exec } = require("child_process");
 
+// String used in selection menus
+const restartText = 'Restart Search'
 
 /**
  * Class to create objects that will store information on the class and its associated rate-my-professor data
@@ -101,68 +103,33 @@ function printWelcome() {
  */
 async function searchCourses() {
     let yearTerm = '' // Format needed for API call
-    let year
 
-    // Prompt user to select a yaer
-    const currYear = new Date().getFullYear()
-    let answer = await inquirer.prompt([{
-        name: 'response',
-        type: 'list',
-        pageSize: 4,
-        message: 'Select a year',
-        choices: [currYear-1, currYear, currYear+1, 'Enter another year']
-    }])
-    if (answer.response === 'Enter another year') {
-        // User chooses to enter a year manually
-        year = await prompt('Enter a year:')
-        if (year === '') {
-            year = currYear // Default value. Blank will throw an error
-            console.log('current year used')
-        }
-    }
-    else {
-        year = answer.response
+    // prompt the user to select a year
+    let year = await selectYear()
+    if (year === restartText) {
+        return searchCourses()
     }
 
-    // Prompt the user to select a term or semester
-    answer = await inquirer.prompt([{
-        name: 'response',
-        type: 'list',
-        pageSize: 4,
-        message: 'Select a semester',
-        choices: ['Winter', 'Spring', 'Summer', 'Fall']
-    }])
-    // Use responses to set the yearTerm variable needed for the api call
-    switch (answer.response) {
-        case 'Winter':
-            yearTerm = year + '1'
-            break
-        case 'Spring':
-            yearTerm = year + '3'
-            break
-        case 'Summer':
-            yearTerm = year + '4'
-            break
-        case 'Fall':
-            yearTerm = year + '5'
-            break
+    // prompt the user to select a term
+    let term = await selectTerm()
+    if (term === restartText) {
+        return searchCourses()
     }
 
-    let teachingArea = await prompt('Enter a teaching area (ex. C S, HIST, etc.) Don\'t forget a space if it is needed:')
-    teachingArea = teachingArea.toUpperCase() // set the user input to upper case
-    if (teachingArea === 'CS') {
-        teachingArea = 'C S' // in case the space was forgotten in C S (easily made mistake)
-    }
-    else if (teachingArea === '') {
-        teachingArea = 'C S' // Default value assigned for testing purposes if left blank
+    yearTerm = year.toString() + term.toString()
+
+    // prompt the user to select a teaching area
+    let teachingArea = await selectTeachingArea()
+    if (teachingArea === restartText) {
+        return searchCourses()
     }
 
     // Generate a list of relevant course numbers for the selected teaching area and yearTerm
     let courseNumbers = await api_calls.getCourseNumbers(yearTerm, teachingArea)
-    answer = await inquirer.prompt([{
+    let answer = await inquirer.prompt([{
         name: 'response',
         type: 'list',
-        pageSize: 7,
+        pageSize: 30,
         message: 'Select a course number',
         choices: Array.from(courseNumbers)
     }])
@@ -181,6 +148,7 @@ async function searchCourses() {
     return classes
 }
 
+
 /**
  * Takes the previously searched class list, adds rate-my-professor data to each class and converts them to rmpCourse objects
  * @param classes
@@ -194,7 +162,8 @@ async function addRMPDataToClasses(classes) {
     for (let i = 0; i < classes.length; i++) {
         try{
             let c = classes[i]
-            let rmpClass = new rmpCourse(c.className, c.classTitle, c.instructor, c.instruction_mode,
+            let className = c.className.match(/\D*\d\d\d\S*/gm) // use regex to pull out the important part of className
+            let rmpClass = new rmpCourse(className[0], c.classTitle, c.instructor, c.instruction_mode,
                 c.days, c.classtime, c.building, c.availableSeats, c.totalEnrolled, c.waitlisted)
 
             // take the first two words (omitting the middle name if there is one). This format is better for the search
@@ -202,7 +171,7 @@ async function addRMPDataToClasses(classes) {
             let teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
             if (teachers[0]) {
                 const teacher = await ratings.getTeacher(teachers[0].id);
-                rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty
+                rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty219984338
                 rmpClass.AVG_RATING = teacher.avgRating
                 rmpClass.NUM_RATINGS = teacher.numRatings
             }
@@ -265,9 +234,9 @@ async function saveClasses(rmpClasses, userBYUID) {
  */
 async function viewSavedCourses(userBYUID) {
     const savedClasses = await database_functions.getSavedRmpClasses(userBYUID)
-    console.table(savedClasses.rows, ['CLASS_NAME', 'CLASS_TITLE', 'INSTRUCTOR', 'AVG_RATING',
+    console.table(savedClasses.rows, ['CLASS_NAME', 'CLASS_TITLE', 'INSTRUCTOR', 'AVG_RATING', 'NUM_RATINGS',
         'AVG_DIFFICULTY', 'INSTRUCTION_MODE', 'DAYS', 'CLASS_TIME', 'BUILDING', 'AVAILABLE_SEATS',
-        'TOTAL_ENROLLED', 'WAITLIST', 'NUM_RATINGS'])
+        'TOTAL_ENROLLED', 'WAITLIST'])
     return savedClasses.rows
 
 }
@@ -308,6 +277,271 @@ async function removeSavedCourses(userBYUID, savedClasses) {
         index = await prompt(promptMessage)
     }
 }
+
+
+/**
+ * Prompt the user to select a year
+ * @param none
+ * @returns year or restartText
+ */
+async function selectYear() {
+    const currYear = new Date().getFullYear()
+    let answer = await inquirer.prompt([{
+        name: 'response',
+        type: 'list',
+        pageSize: 4,
+        message: 'Select a year',
+        choices: [currYear-1, currYear, currYear+1, 'Enter another year']
+    }])
+    if (answer.response === 'Enter another year') {
+        // User chooses to enter a year manually
+        let year = await prompt('Enter a year:')
+        if (year === '') {
+            console.log('current year used')
+            return currYear // Default value. Blank will throw an error
+        }
+        return year
+    }
+    else {
+        return answer.response
+    }
+}
+
+
+/**
+ * Prompt the user to select a term
+ * @param none
+ * @returns term or restartText
+ */
+async function selectTerm() {
+    let answer = await inquirer.prompt([{
+        name: 'response',
+        type: 'list',
+        pageSize: 5,
+        message: 'Select a semester',
+        choices: [restartText, 'Winter', 'Spring', 'Summer', 'Fall']
+    }])
+    // Use responses to set the yearTerm variable needed for the api call
+    switch (answer.response) {
+        case 'Winter':
+            return '1'
+        case 'Spring':
+            return '3'
+        case 'Summer':
+            return '4'
+        case 'Fall':
+            return '5'
+        default:
+            return restartText
+    }
+}
+
+
+/**
+ * Prompt the user to select a teaching area
+ * @param none
+ * @returns teaching area or restartText
+ */
+async function selectTeachingArea() {
+    const teachingAreasArr = [
+        restartText,
+        'Enter manually',
+        'A HTG',
+        'ACC',
+        'AEROS',
+        'AFRIK',
+        'AM ST',
+        'ANES',
+        'ANTHR',
+        'ARAB',
+        'ARMEN',
+        'ART',
+        'ARTHC',
+        'ASIAN',
+        'ASL',
+        'BIO',
+        'BULGN',
+        'C S',
+        'CANT',
+        'CCE',
+        'CE',
+        'CEBU',
+        'CELL',
+        'CFM',
+        'CH EN',
+        'CHEM',
+        'CHIN',
+        'CL CV',
+        'CLSCS',
+        'CMLIT',
+        'CMPST',
+        'COMD',
+        'COMMS',
+        'CPSE',
+        'CREOL',
+        'CROAT',
+        'CSANM',
+        'DANCE',
+        'DANSH',
+        'DES',
+        'DESAN',
+        'DESGD',
+        'DESIL',
+        'DESPH',
+        'DIGHT',
+        'DUTCH',
+        'EC EN',
+        'ECE',
+        'ECON',
+        'EDLF',
+        'EIME',
+        'EL ED',
+        'ELING',
+        'EMBA',
+        'ENGL',
+        'ENT',
+        'ESL',
+        'EUROP',
+        'EXDM',
+        'EXSC',
+        'FHSS',
+        'FIJI',
+        'FIN',
+        'FINN',
+        'FLANG',
+        'FNART',
+        'FREN',
+        'GEOG',
+        'GEOL',
+        'GERM',
+        'GREEK',
+        'GSCM',
+        'GWS',
+        'HAWAI',
+        'HCOLL',
+        'HEB',
+        'HILIG',
+        'HINDI',
+        'HIST',
+        'HLTH',
+        'HMONG',
+        'HONRS',
+        'HRM',
+        'IAS',
+        'ICLND',
+        'ICS',
+        'IHUM',
+        'INDES',
+        'INDON',
+        'IP&T',
+        'IS',
+        'IT&C',
+        'ITAL',
+        'JAPAN',
+        'KHMER',
+        'KICHE',
+        'KOREA',
+        'LATIN',
+        'LATVI',
+        'LAW',
+        'LFSCI',
+        'LING',
+        'LT AM',
+        'M COM',
+        'MALAG',
+        'MARCH',
+        'MATH',
+        'MBA',
+        'MDT',
+        'ME EN',
+        'MESA',
+        'MFGEN',
+        'MFHD',
+        'MFT',
+        'MIL S',
+        'MKTH',
+        'MMBIO',
+        'MPA',
+        'MSB',
+        'MTHED',
+        'MUSIC',
+        'NAVAJ',
+        'NDFS',
+        'NE LG',
+        'NES',
+        'NEURO',
+        'NORWE',
+        'NURS',
+        'PERSI',
+        'PETE',
+        'PHIL',
+        'PHSCS',
+        'PHY S',
+        'PLANG',
+        'POLI',
+        'POLSH',
+        'PORT',
+        'PHYCH',
+        'PWD',
+        'QUECH',
+        'REL A',
+        'REL C',
+        'REL E',
+        'ROM',
+        'RUSS',
+        'SAMOA',
+        'SC ED',
+        'SCAND',
+        'SFL',
+        'SLAT',
+        'SLN',
+        'SOC',
+        'SOC W',
+        'SPAN',
+        'SRBIA',
+        'STAC',
+        'STAT',
+        'STDEV',
+        'STRAT',
+        'SWAHI',
+        'SWED',
+        'SWELL',
+        'T ED',
+        'TAGAL',
+        'TECH',
+        'TEE',
+        'TELL',
+        'TES',
+        'TEST',
+        'THAI',
+        'TMA',
+        'TONGA',
+        'TURK',
+        'UKRAI',
+        'VIET',
+        'WELSH',
+        'WRTG'
+    ]
+
+    let answer = await inquirer.prompt([{
+        name: 'response',
+        type: 'list',
+        pageSize: 30,
+        message: 'Select a Teaching Area',
+        choices: teachingAreasArr
+    }])
+    if (answer.response === 'Enter manually') {
+        // User chooses to enter a teaching area manually
+        let teachingArea = await prompt('Enter a teaching area: ')
+        if (teachingArea === '') {
+            console.log('C S used')
+            teachingArea = 'C S'
+        }
+        return teachingArea
+    }
+    return answer.response
+}
+
 
 
 module.exports = {login, searchCourses, viewSavedCourses, addRMPDataToClasses, saveClasses, removeSavedCourses}
