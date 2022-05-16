@@ -2,7 +2,10 @@ const oracle = require('oracledb')
 const AWS = require('aws-sdk')
 
 
-//Oracle DB Parameters
+/**
+ * Oracle DB Parameters
+ * @type {{password: string, connectString: string, user: string}}
+ */
 oracle.outFormat = oracle.OBJECT
 oracle.autoCommit = true
 const oracleParameters = {
@@ -12,14 +15,20 @@ const oracleParameters = {
 }
 
 
-//AWS Parameters
+/**
+ * AWS Parameters
+ * @type {{Names: string[], WithDecryption: boolean}}
+ */
 let awsParameters = {
     Names: [`/hunter-madsen-technical-challenge/dev/ORACLEUSER`, `/hunter-madsen-technical-challenge/dev/ORACLEPASS`],
     WithDecryption: true
 }
 
 
-// Check if user is connected to AWS and set Oracle parameters
+/**
+ * Checks if user is connected to AWS and sets Oracle parameters
+ * @param count A count to help this function only run a set number of times
+ */
 const getOracleCredentials = async function (count) {
     //AWS Configuration
     AWS.config.update({ region: `us-west-2`})
@@ -43,7 +52,9 @@ const getOracleCredentials = async function (count) {
 }
 
 
-// Check if user is connected to the proper VPN
+/**
+ * Checks if user is connected to the proper VPN and exits with an error message if not
+ */
 async function testOracleConnectivity() {
     try {
         console.log(`Checking that your VPN is on -- please wait`)
@@ -64,27 +75,33 @@ async function testOracleConnectivity() {
     }
 }
 
-
-async function addRmpClassToDatabase(rmpClass, userBYUID) {
+/**
+ * Adds an rmpCourse to the database along with an associated BYU-ID
+ * @param rmpCourse
+ * @param userBYUID
+ */
+async function addRmpClassToDatabase(rmpCourse, userBYUID) {
     try {
         const conn = await oracle.getConnection(oracleParameters)
         await conn.execute('INSERT INTO OIT#MHM62.SAVED_RMP_CLASSES (SAVED_ID, CLASS_NAME, CLASS_TITLE, ASSOSIATED_USER_BYUID, INSTRUCTOR,' +
             ' INSTRUCTION_MODE, DAYS, CLASS_TIME, BUILDING, AVAILABLE_SEATS, TOTAL_ENROLLED, WAITLIST, AVG_DIFFICULTY, AVG_RATING, NUM_RATINGS)' +
             'VALUES (:savedID, :className, :classTitle, :assosiatedUserBYUID, :instructor, :instructionMode, :days, :classtime,' +
             ' :building, :availableSeats, :totalEnrolled, :waitlist, :avgDifficulty, :avgRating, :numRatings)',
-            [rmpClass.UUID, rmpClass.CLASS_NAME, rmpClass.CLASS_TITLE, userBYUID, rmpClass.INSTRUCTOR, rmpClass.INSTRUCTION_MODE, rmpClass.DAYS, rmpClass.CLASS_TIME,
-            rmpClass.BUILDING, rmpClass.AVAILABLE_SEATS, rmpClass.TOTAL_ENROLLED, rmpClass.WAITLIST,
-            rmpClass.AVG_DIFFICULTY, rmpClass.AVG_RATING, rmpClass.NUM_RATINGS])
+            [rmpCourse.UUID, rmpCourse.CLASS_NAME, rmpCourse.CLASS_TITLE, userBYUID, rmpCourse.INSTRUCTOR, rmpCourse.INSTRUCTION_MODE, rmpCourse.DAYS, rmpCourse.CLASS_TIME,
+            rmpCourse.BUILDING, rmpCourse.AVAILABLE_SEATS, rmpCourse.TOTAL_ENROLLED, rmpCourse.WAITLIST,
+            rmpCourse.AVG_DIFFICULTY, rmpCourse.AVG_RATING, rmpCourse.NUM_RATINGS])
 
         await conn.close()
-        console.log(`Added '${rmpClass.CLASS_TITLE}' to the database`)
+        console.log(`Added '${rmpCourse.CLASS_TITLE}' to the database`)
     } catch (e) {
+        // Catch the error of added a duplicate course
         if (e.message.includes('unique')) {
             console.log('Class already added')
         }
         else if (e.message.includes('table or view does not exist')) {
+            // Rebuilds the table if it has been destroyed
             await createTableInDatabase()
-            return addRmpClassToDatabase(rmpClass, userBYUID)
+            return addRmpClassToDatabase(rmpCourse, userBYUID)
         }
         else {
             console.log(e)
@@ -92,7 +109,11 @@ async function addRmpClassToDatabase(rmpClass, userBYUID) {
     }
 }
 
-
+/**
+ * Pulls saved courses from the database for a given user
+ * @param userBYUID
+ * @returns result of the database query
+ */
 async function getSavedRmpClasses(userBYUID) {
     try {
         const conn = await oracle.getConnection(oracleParameters)
@@ -101,6 +122,7 @@ async function getSavedRmpClasses(userBYUID) {
         return result
     } catch (e) {
         if (e.message.includes('table or view does not exist')) {
+            // Rebuilds the table if it has been destroyed
             await createTableInDatabase()
             return getSavedRmpClasses(userBYUID)
         }
@@ -109,7 +131,11 @@ async function getSavedRmpClasses(userBYUID) {
     }
 }
 
-
+/**
+ * Removes a saved course from the database by uuid
+ * @param uuid
+ * @returns success boolean
+ */
 async function removeRmpClassFromDatabase(uuid) {
     try {
         const conn = await oracle.getConnection(oracleParameters)
@@ -123,7 +149,9 @@ async function removeRmpClassFromDatabase(uuid) {
     return true
 }
 
-
+/**
+ * Clears and rebuilds the table in the database (for dev use)
+ */
 async function clearAndRebuildDatabase() {
     // Development use only
     try {
@@ -139,7 +167,9 @@ async function clearAndRebuildDatabase() {
     }
 }
 
-
+/**
+ * Creates the program table for the database
+ */
 async function createTableInDatabase() {
     try {
         const conn = await oracle.getConnection(oracleParameters)

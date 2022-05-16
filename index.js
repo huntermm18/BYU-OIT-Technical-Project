@@ -4,9 +4,12 @@ const df = require('./src/database_functions')
 
 
 main().catch((e) => {
-    console.log(e)
+    console.log(e.stack)
 })
 
+/**
+ *  Controls the start and flow of the program
+ */
 async function main() {
     // Test AWS connection and use to set Oracle credentials
     await df.getOracleCredentials(0)
@@ -40,7 +43,10 @@ async function main() {
     }
 }
 
-
+/**
+ * Pulls up the main menu for the program
+ * @returns An int corresponding to the user choice
+ */
 async function promptMenu() {
     const answer = await inquirer.prompt([{
         name: 'response',

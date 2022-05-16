@@ -5,7 +5,9 @@ const database_functions = require('./database_functions')
 const UUID = require("uuid");
 const { exec } = require("child_process");
 
-
+/**
+ * Class to create objects that will store information on the class and its associated rate-my-professor data
+ */
 class rmpCourse {
     constructor(className, classTitle, instructor, instructionMode, days, classtime, building, availableSeats, totalEnrolled, waitlisted) {
         this.UUID = UUID.v4()
@@ -23,6 +25,7 @@ class rmpCourse {
         this.AVG_RATING = null
         this.NUM_RATINGS = null
 
+        // Set DAYS, CLASS_TIME and BUILDING to 'N/A' for the case of an online class
         if (this.DAYS === null) {
             this.DAYS = 'N/A'
         }
@@ -35,9 +38,12 @@ class rmpCourse {
     }
 }
 
-
+/**
+ * Simple function to prompt the user with a message and get a response
+ * @param message
+ * @returns user response
+ */
 async function prompt(message) {
-    // Prompts the user with 'message' and returns their response
     const answer = await inquirer.prompt([{
         name: 'userInput',
         type: 'input',
@@ -46,6 +52,10 @@ async function prompt(message) {
     return answer.userInput
 }
 
+/**
+ * Logs in the user
+ * @returns byuID user's BYU-ID
+ */
 async function login() {
     console.clear()
     printWelcome()
@@ -67,16 +77,22 @@ async function login() {
     return byuID
 }
 
+/**
+ * Prints the welcome message for the start of the program
+ */
 function printWelcome() {
     console.log('Welcome to the BYU course searcher with Rate-My-Professor data')
 }
 
-
+/**
+ * Takes parameters from the user and searches for relevant courses
+ * @returns classes A list of relevant classes
+ */
 async function searchCourses() {
     let yearTerm = '' // Format needed for API call
     let year = await prompt('Enter a year:')
     if (year === '') {
-        year = 2022 // todo for testing. Blank will throw an error
+        year = 2022 // Default value. Blank will throw an error
     }
     const answer = await inquirer.prompt([{
         name: 'response',
@@ -104,19 +120,22 @@ async function searchCourses() {
     let teachingArea = await prompt('Enter a teaching area (ex. C S, HIST, etc.) Don\'t forget a space if it is needed:')
     teachingArea = teachingArea.toUpperCase() // set the user input to upper case
     if (teachingArea === 'CS') {
-        teachingArea = 'C S' // in case the space was forgotten in C S
+        teachingArea = 'C S' // in case the space was forgotten in C S (easily made mistake)
     }
     else if (teachingArea === '') {
-        teachingArea = 'C S' // todo for testing. Blank will throw an error
+        teachingArea = 'C S' // Default value assigned for testing purposes if left blank
     }
 
     let courseNumber = await prompt('Enter a course number (ex. 252, 101, etc.):')
     if (courseNumber === '') {
-        courseNumber = '235' // todo for testing. Blank will throw an error
+        courseNumber = '235' // Default value assigned for testing purposes if left blank
     }
 
+    // Uses api_calls function to get the relevant classes
     let classes = await api_calls.getClasses(yearTerm, teachingArea, courseNumber)
+
     if (!classes.length) {
+        // Starts function over again if no classes are found
         console.log('No classes found. Check to make sure you entered a valid teaching area and course number')
         return searchCourses()
     }
@@ -125,10 +144,16 @@ async function searchCourses() {
     return classes
 }
 
+/**
+ * Takes the previously searched class list, adds rate-my-professor data to each class and converts them to rmpCourse objects
+ * @param classes
+ * @returns rmpClasses A list of rmpCourse objects
+ */
 async function addRMPDataToClasses(classes) {
     const byuRMPID = 'U2Nob29sLTEzNQ=='// Rate My Professor  university ID for BYU (As of 5/11/2022)
     let rmpClasses = []
 
+    // Converts the classes returned from the API call to rmpCourse objects and then searches for rate-my-professor data
     for (let i = 0; i < classes.length; i++) {
         try{
             let c = classes[i]
@@ -146,7 +171,7 @@ async function addRMPDataToClasses(classes) {
             }
 
             else {
-                // No teachers were returned searching that name so try again with the middle name
+                // No teachers were returned searching with first name so try again with the middle name
                 if (c.instructor.split(' ').length >= 3) {
                     instructorSearchName = c.instructor.split(' ')[0] + ' ' + c.instructor.split(' ')[2]
                     teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
@@ -159,7 +184,10 @@ async function addRMPDataToClasses(classes) {
                     rmpClass.NUM_RATINGS = teacher.numRatings
                 }
             }
+
+            // Push the created rmpCourse object to the list
             rmpClasses.push(rmpClass)
+
         } catch (e) {
             if (e.message.includes('EADDRINUSE')) {
                 console.log('EADDRINUSE error caught. Running command \'taskkill /im node.exe /F\' to attempt to work around.')
@@ -168,10 +196,15 @@ async function addRMPDataToClasses(classes) {
             }
         }
     }
+
     return rmpClasses
 }
 
-
+/**
+ * Prompts the user to enter the indexes of the classes they would like to save into the database and then saves them
+ * @param rmpClasses
+ * @param userBYUID
+ */
 async function saveClasses(rmpClasses, userBYUID) {
     const promptMessage = 'Enter the index of a class you would like to save or leave blank to return to the menu'
     let index = await prompt(promptMessage)
@@ -187,7 +220,11 @@ async function saveClasses(rmpClasses, userBYUID) {
     }
 }
 
-
+/**
+ * Prints a table of previously saved courses
+ * @param userBYUID
+ * @returns A list of saved classes associated with the current userBYUID pulled from the database
+ */
 async function viewSavedCourses(userBYUID) {
     const savedClasses = await database_functions.getSavedRmpClasses(userBYUID)
     console.table(savedClasses.rows, ['CLASS_NAME', 'CLASS_TITLE', 'INSTRUCTOR', 'AVG_RATING',
@@ -197,18 +234,27 @@ async function viewSavedCourses(userBYUID) {
 
 }
 
-
+/**
+ * Provides the user a chance to remove saved courses from their list of saved courses
+ * @param userBYUID
+ * @param savedClasses List of previously saved classes
+ */
 async function removeSavedCourses(userBYUID, savedClasses) {
     const promptMessage = 'Enter the index of a class you would like to remove or leave blank to return to the menu'
     let index = await prompt(promptMessage)
     while (index === 0 || index) {
         index = parseInt(index)
+
+        // Prompts user for a new index if not valid
         if (!(index >= 0 && index < savedClasses.length)) {
             console.log('Not a valid index')
             index = await prompt(promptMessage)
             continue
         }
+
+        // Calls database_functions function to remove the class
         const removed = await database_functions.removeRmpClassFromDatabase(savedClasses[index].SAVED_ID)
+
         if (removed) {
             console.clear()
             console.log(`Removed class '${savedClasses[index].CLASS_TITLE}' from the database`)
