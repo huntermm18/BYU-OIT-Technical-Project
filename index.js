@@ -1,3 +1,9 @@
+/**
+ * @file Controls the flow of the program
+ * @author Hunter Madsen
+ * last modified: 5/16/2022
+ */
+
 const inquirer = require("inquirer");
 const pf = require('./src/program_functions')
 const df = require('./src/database_functions')
@@ -9,6 +15,8 @@ main().catch((e) => {
 
 /**
  *  Controls the start and flow of the program
+ *  @param none
+ *  @returns none
  */
 async function main() {
     // Test AWS connection and use to set Oracle credentials
@@ -45,6 +53,7 @@ async function main() {
 
 /**
  * Pulls up the main menu for the program
+ * @param none
  * @returns An int corresponding to the user choice
  */
 async function promptMenu() {

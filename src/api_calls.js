@@ -1,5 +1,16 @@
+/**
+ * @file Handles the API calls
+ * @author Hunter Madsen
+ * last modified: 5/16/2022
+ */
+
 const axios = require('axios')
 
+
+/**
+ * Parameters for person api call
+ * @type {{headers: {Authorization: string}, method: string, url: string}}
+ */
 const personOptions = {
     url: '',
     method: 'GET',
@@ -8,6 +19,11 @@ const personOptions = {
     }
 }
 
+
+/**
+ * Parameters for classSchedule api call
+ * @type {{headers: {Authorization: string}, method: string, url: string}}
+ */
 const classScheduleOptions = {
     url: '',
     method: 'GET',
@@ -24,6 +40,8 @@ const classScheduleOptions = {
  */
 async function testAPIs(byuID, token) {
     console.log('Testing API connections...')
+    let missingPersonsApi = false
+    let missingClassApi = false
     let userFirstName = ''
 
     // Tests Persons API
@@ -33,9 +51,7 @@ async function testAPIs(byuID, token) {
         const response = await axios(personOptions)
         userFirstName = response.data.basic.preferred_first_name.value
     } catch (e) {
-        console.log('Please make sure you are subscribed to both' +
-            ' the AcademicClassScheduleClassSchedule - v1 API and the Persons - v3 API and try again')
-        process.exit();
+        missingPersonsApi = true
     }
 
     // Tests AcademicClassScheduleClassSchedule API
@@ -44,9 +60,21 @@ async function testAPIs(byuID, token) {
     try {
         await axios(classScheduleOptions)
     } catch (e) {
-        console.log('Please make sure you are subscribed to both' +
-            ' the AcademicClassScheduleClassSchedule - v1 API and the Persons - v3 API and try again')
-        process.exit();
+        missingClassApi = true
+    }
+
+    if (missingClassApi || missingPersonsApi) {
+        if (missingClassApi && !missingPersonsApi) {
+            console.log('Please make sure you are subscribed to the AcademicClassScheduleClassSchedule - v1 API and try again')
+        }
+        else if (missingPersonsApi && !missingClassApi) {
+            console.log('Please make sure you are subscribed to the Persons - v3 API and try again')
+        }
+        else {
+            console.log('Please make sure you are subscribed to both' +
+                ' the AcademicClassScheduleClassSchedule - v1 API and the Persons - v3 API and try again')
+        }
+        process.exit()
     }
 
     return userFirstName

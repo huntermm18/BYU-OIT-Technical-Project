@@ -1,3 +1,10 @@
+/**
+ * @file Handles the database functions
+ * @author Hunter Madsen
+ * last modified: 5/16/2022
+ */
+
+
 const oracle = require('oracledb')
 const AWS = require('aws-sdk')
 
@@ -28,6 +35,7 @@ let awsParameters = {
 /**
  * Checks if user is connected to AWS and sets Oracle parameters
  * @param count A count to help this function only run a set number of times
+ * @return none
  */
 const getOracleCredentials = async function (count) {
     //AWS Configuration
@@ -35,7 +43,7 @@ const getOracleCredentials = async function (count) {
     const ssm = new AWS.SSM()
 
     console.clear()
-    console.log(`Testing AWS CLI connection -- please wait`)
+    //console.log(`Testing AWS CLI connection -- please wait`)
     try {
         const returnedParameters = await ssm.getParameters(awsParameters).promise()
         oracleParameters.user = returnedParameters.Parameters[1].Value
@@ -54,10 +62,12 @@ const getOracleCredentials = async function (count) {
 
 /**
  * Checks if user is connected to the proper VPN and exits with an error message if not
+ * @param none
+ * @returns none
  */
 async function testOracleConnectivity() {
     try {
-        console.log(`Checking that your VPN is on -- please wait`)
+        //console.log(`Checking that your VPN is on -- please wait`)
         const conn = await oracle.getConnection(oracleParameters)
         await conn.execute(`SELECT * FROM DUAL`)
         await conn.close()
@@ -69,7 +79,7 @@ async function testOracleConnectivity() {
             process.exit()
         }
         else {
-            console.log('The following error just occurred: ', error)
+            console.log('The following error just occurred: ', error.message, error.stack)
             process.exit()
         }
     }
@@ -79,17 +89,59 @@ async function testOracleConnectivity() {
  * Adds an rmpCourse to the database along with an associated BYU-ID
  * @param rmpCourse
  * @param userBYUID
+ * @returns none
  */
 async function addRmpClassToDatabase(rmpCourse, userBYUID) {
     try {
         const conn = await oracle.getConnection(oracleParameters)
-        await conn.execute('INSERT INTO OIT#MHM62.SAVED_RMP_CLASSES (SAVED_ID, CLASS_NAME, CLASS_TITLE, ASSOSIATED_USER_BYUID, INSTRUCTOR,' +
-            ' INSTRUCTION_MODE, DAYS, CLASS_TIME, BUILDING, AVAILABLE_SEATS, TOTAL_ENROLLED, WAITLIST, AVG_DIFFICULTY, AVG_RATING, NUM_RATINGS)' +
-            'VALUES (:savedID, :className, :classTitle, :assosiatedUserBYUID, :instructor, :instructionMode, :days, :classtime,' +
-            ' :building, :availableSeats, :totalEnrolled, :waitlist, :avgDifficulty, :avgRating, :numRatings)',
-            [rmpCourse.UUID, rmpCourse.CLASS_NAME, rmpCourse.CLASS_TITLE, userBYUID, rmpCourse.INSTRUCTOR, rmpCourse.INSTRUCTION_MODE, rmpCourse.DAYS, rmpCourse.CLASS_TIME,
-            rmpCourse.BUILDING, rmpCourse.AVAILABLE_SEATS, rmpCourse.TOTAL_ENROLLED, rmpCourse.WAITLIST,
-            rmpCourse.AVG_DIFFICULTY, rmpCourse.AVG_RATING, rmpCourse.NUM_RATINGS])
+        await conn.execute('INSERT INTO OIT#MHM62.SAVED_RMP_CLASSES (' +
+            'SAVED_ID' +
+            ', CLASS_NAME' +
+            ', CLASS_TITLE' +
+            ', ASSOSIATED_USER_BYUID' +
+            ', INSTRUCTOR' +
+            ', INSTRUCTION_MODE' +
+            ', DAYS, CLASS_TIME' +
+            ', BUILDING' +
+            ', AVAILABLE_SEATS' +
+            ', TOTAL_ENROLLED' +
+            ', WAITLIST' +
+            ', AVG_DIFFICULTY' +
+            ', AVG_RATING' +
+            ', NUM_RATINGS' +
+            ')' +
+            'VALUES (:' +
+            'savedID' +
+            ', :className' +
+            ', :classTitle' +
+            ', :assosiatedUserBYUID' +
+            ', :instructor' +
+            ', :instructionMode' +
+            ', :days' +
+            ', :classtime' +
+            ', :building' +
+            ', :availableSeats' +
+            ', :totalEnrolled' +
+            ', :waitlist' +
+            ', :avgDifficulty' +
+            ', :avgRating' +
+            ', :numRatings' +
+            ')',
+            [rmpCourse.UUID
+                , rmpCourse.CLASS_NAME
+                , rmpCourse.CLASS_TITLE
+                , userBYUID
+                , rmpCourse.INSTRUCTOR
+                , rmpCourse.INSTRUCTION_MODE
+                , rmpCourse.DAYS
+                , rmpCourse.CLASS_TIME
+                , rmpCourse.BUILDING
+                , rmpCourse.AVAILABLE_SEATS
+                , rmpCourse.TOTAL_ENROLLED
+                , rmpCourse.WAITLIST
+                , rmpCourse.AVG_DIFFICULTY
+                , rmpCourse.AVG_RATING
+                , rmpCourse.NUM_RATINGS])
 
         await conn.close()
         console.log(`Added '${rmpCourse.CLASS_TITLE}' to the database`)
@@ -151,6 +203,8 @@ async function removeRmpClassFromDatabase(uuid) {
 
 /**
  * Clears and rebuilds the table in the database (for dev use)
+ * @param none
+ * @returns none
  */
 async function clearAndRebuildDatabase() {
     // Development use only
@@ -169,6 +223,8 @@ async function clearAndRebuildDatabase() {
 
 /**
  * Creates the program table for the database
+ * @param none
+ * @returns none
  */
 async function createTableInDatabase() {
     try {

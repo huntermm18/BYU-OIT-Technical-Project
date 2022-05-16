@@ -1,3 +1,9 @@
+/**
+ * @file used for testing and dev
+ * @author Hunter Madsen
+ * last modified: 5/16/2022
+ */
+
 const df = require('../src/database_functions')
 const uuid = require('uuid')
 const { exec } = require("child_process");

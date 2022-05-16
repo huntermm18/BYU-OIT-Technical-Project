@@ -1,3 +1,10 @@
+/**
+ * @file Stores many of the main functions used throughout the program
+ * @author Hunter Madsen
+ * last modified: 5/16/2022
+ */
+
+
 const inquirer = require('inquirer');
 const ratings = require('@mtucourses/rate-my-professors').default;
 const api_calls = require('./api_calls')
@@ -5,8 +12,11 @@ const database_functions = require('./database_functions')
 const UUID = require("uuid");
 const { exec } = require("child_process");
 
+
 /**
  * Class to create objects that will store information on the class and its associated rate-my-professor data
+ * @param none
+ * @returns none
  */
 class rmpCourse {
     constructor(className, classTitle, instructor, instructionMode, days, classtime, building, availableSeats, totalEnrolled, waitlisted) {
@@ -54,31 +64,31 @@ async function prompt(message) {
 
 /**
  * Logs in the user
+ * @param none
  * @returns byuID user's BYU-ID
  */
 async function login() {
     console.clear()
     printWelcome()
 
-    let byuID = ''
-    let token = ''
-
     // Get BYU ID and WSO2
-    while(!byuID) {
-        byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
-    }
-    while (!token) {
-        token = await prompt('Enter your WSO2 token:')
-    }
+    let byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
+    if (!byuID) {byuID = '083814923'} // fixme for testing
+    let token = await prompt('Enter your WSO2 token:')
+    if (!token) {token = 'b995ce8ba755b18724b812af0785c41'} // fixme for testing
 
-    // Test if user is subscribed to the proper APIs
-    await api_calls.testAPIs(byuID, token)
+    // Test if user is subscribed to the proper APIs and get user's name
+    const userFirstName = await api_calls.testAPIs(byuID, token)
+    console.clear()
+    console.log(`Welcome ${userFirstName}`)
 
     return byuID
 }
 
 /**
  * Prints the welcome message for the start of the program
+ * @param none
+ * @returns none
  */
 function printWelcome() {
     console.log('Welcome to the BYU course searcher with Rate-My-Professor data')
@@ -86,6 +96,7 @@ function printWelcome() {
 
 /**
  * Takes parameters from the user and searches for relevant courses
+ * @param none
  * @returns classes A list of relevant classes
  */
 async function searchCourses() {
@@ -230,6 +241,7 @@ async function addRMPDataToClasses(classes) {
  * Prompts the user to enter the indexes of the classes they would like to save into the database and then saves them
  * @param rmpClasses
  * @param userBYUID
+ * @returns none
  */
 async function saveClasses(rmpClasses, userBYUID) {
     const promptMessage = 'Enter the index of a class you would like to save or leave blank to return to the menu'
@@ -264,6 +276,7 @@ async function viewSavedCourses(userBYUID) {
  * Provides the user a chance to remove saved courses from their list of saved courses
  * @param userBYUID
  * @param savedClasses List of previously saved classes
+ * @returns none
  */
 async function removeSavedCourses(userBYUID, savedClasses) {
     const promptMessage = 'Enter the index of a class you would like to remove or leave blank to return to the menu'
