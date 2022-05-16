@@ -90,11 +90,31 @@ function printWelcome() {
  */
 async function searchCourses() {
     let yearTerm = '' // Format needed for API call
-    let year = await prompt('Enter a year:')
-    if (year === '') {
-        year = 2022 // Default value. Blank will throw an error
+    let year
+
+    // Prompt user to select a yaer
+    const currYear = new Date().getFullYear()
+    let answer = await inquirer.prompt([{
+        name: 'response',
+        type: 'list',
+        pageSize: 4,
+        message: 'Select a year',
+        choices: [currYear-1, currYear, currYear+1, 'Enter another year']
+    }])
+    if (answer.response === 'Enter another year') {
+        // User chooses to enter a year manually
+        year = await prompt('Enter a year:')
+        if (year === '') {
+            year = currYear // Default value. Blank will throw an error
+            console.log('current year used')
+        }
     }
-    const answer = await inquirer.prompt([{
+    else {
+        year = answer.response
+    }
+
+    // Prompt the user to select a term or semester
+    answer = await inquirer.prompt([{
         name: 'response',
         type: 'list',
         pageSize: 4,
@@ -126,10 +146,16 @@ async function searchCourses() {
         teachingArea = 'C S' // Default value assigned for testing purposes if left blank
     }
 
-    let courseNumber = await prompt('Enter a course number (ex. 252, 101, etc.):')
-    if (courseNumber === '') {
-        courseNumber = '235' // Default value assigned for testing purposes if left blank
-    }
+    // Generate a list of relevant course numbers for the selected teaching area and yearTerm
+    let courseNumbers = await api_calls.getCourseNumbers(yearTerm, teachingArea)
+    answer = await inquirer.prompt([{
+        name: 'response',
+        type: 'list',
+        pageSize: 7,
+        message: 'Select a course number',
+        choices: Array.from(courseNumbers)
+    }])
+    let courseNumber = answer.response
 
     // Uses api_calls function to get the relevant classes
     let classes = await api_calls.getClasses(yearTerm, teachingArea, courseNumber)

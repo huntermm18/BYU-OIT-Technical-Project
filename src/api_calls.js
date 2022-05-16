@@ -61,6 +61,7 @@ async function testAPIs(byuID, token) {
  * @returns A list of relevant classes
  */
 async function getClasses(yearTerm, teachingArea, courseNumber) {
+    console.log('loading...')
     classScheduleOptions.url = `https://api.byu.edu:443/domains/legacy/academic/classschedule/classschedule/v1/${yearTerm}/${teachingArea}/ALL`
     let response = await axios(classScheduleOptions)
 
@@ -75,5 +76,26 @@ async function getClasses(yearTerm, teachingArea, courseNumber) {
     return classes
 }
 
+/**
+ * Gets the relevant course numbers for the given teaching area and yearTerm
+ * @param yearTerm
+ * @param teachingArea
+ * @return Set of course numbers
+ */
+async function getCourseNumbers(yearTerm, teachingArea) {
+    classScheduleOptions.url = `https://api.byu.edu:443/domains/legacy/academic/classschedule/classschedule/v1/${yearTerm}/${teachingArea}/ALL`
+    let response = await axios(classScheduleOptions)
+    const allClasses = response.data.CourseSchedProofService.response.Course_List
+    let courseNumbers = new Set()
+    for (let i = 0; i < allClasses.length; ++i) {
+        // use regex to pull course number out of course title
+        if (allClasses[i].className) {
+            let result = allClasses[i].className.match(/\d\d\d\S*/gm)
+            courseNumbers.add(result[0])
+        }
+    }
+    return courseNumbers
+}
 
-module.exports = {testAPIs, getClasses}
+
+module.exports = {testAPIs, getClasses, getCourseNumbers}
