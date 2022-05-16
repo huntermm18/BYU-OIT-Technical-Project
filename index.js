@@ -25,9 +25,9 @@ async function main() {
             let classes = await pf.searchCourses()
             let rmpClasses = await pf.addRMPDataToClasses(classes)
             console.clear()
-            console.table(rmpClasses, ['className', 'classTitle', 'instructor', 'avgRating', 'avgDifficulty',
-                'instruction_mode', 'days', 'classtime', 'building', 'availableSeats',
-                'totalEnrolled', 'waitlisted', 'numRatings'])
+            console.table(rmpClasses, ['CLASS_NAME', 'CLASS_TITLE', 'INSTRUCTOR', 'AVG_RATING', 'AVG_DIFFICULTY',
+                'INSTRUCTION_MODE', 'DAYS', 'CLASS_TIME', 'BUILDING', 'AVAILABLE_SEATS',
+                'TOTAL_ENROLLED', 'WAITLIST', 'NUM_RATINGS'])
             await pf.saveClasses(rmpClasses, userBYUID)
         }
         else if (choice === 2) {

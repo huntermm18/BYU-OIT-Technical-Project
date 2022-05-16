@@ -8,31 +8,30 @@ const { exec } = require("child_process");
 
 class rmpCourse {
     constructor(className, classTitle, instructor, instructionMode, days, classtime, building, availableSeats, totalEnrolled, waitlisted) {
-        this.uuid = UUID.v4()
-        this.className = className
-        this.classTitle = classTitle
-        this.instructor = instructor
-        this.instruction_mode = instructionMode
-        this.days = days
-        this.classtime = classtime
-        this.building = building
-        this.availableSeats = availableSeats
-        this.totalEnrolled = totalEnrolled
-        this.waitlisted = waitlisted
-        this.avgDifficulty = null
-        this.avgRating = null
-        this.numRatings = null
+        this.UUID = UUID.v4()
+        this.CLASS_NAME = className
+        this.CLASS_TITLE = classTitle
+        this.INSTRUCTOR = instructor
+        this.INSTRUCTION_MODE = instructionMode
+        this.DAYS = days
+        this.CLASS_TIME = classtime
+        this.BUILDING = building
+        this.AVAILABLE_SEATS = availableSeats
+        this.TOTAL_ENROLLED = totalEnrolled
+        this.WAITLIST = waitlisted
+        this.AVG_DIFFICULTY = null
+        this.AVG_RATING = null
+        this.NUM_RATINGS = null
 
-        if (this.days === null) {
-            this.days = 'N/A'
+        if (this.DAYS === null) {
+            this.DAYS = 'N/A'
         }
-        if (this.classtime === null) {
-            this.classtime = 'N/A'
+        if (this.CLASS_TIME === null) {
+            this.CLASS_TIME = 'N/A'
         }
-        if (this.building === null) {
-            this.building = 'N/A'
+        if (this.BUILDING === null) {
+            this.BUILDING = 'N/A'
         }
-
     }
 }
 
@@ -51,11 +50,16 @@ async function login() {
     console.clear()
     printWelcome()
 
+    let byuID = ''
+    let token = ''
+
     // Get BYU ID and WSO2
-    let byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
-    if (!byuID) {byuID = '083814923'} // fixme for testing
-    let token = await prompt('Enter your WSO2 token:')
-    if (!token) {token = 'b995ce8ba755b18724b812af0785c41'} // fixme for testing
+    while(!byuID) {
+        byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
+    }
+    while (!token) {
+        token = await prompt('Enter your WSO2 token:')
+    }
 
     // Test if user is subscribed to the proper APIs
     await api_calls.testAPIs(byuID, token)
@@ -69,9 +73,11 @@ function printWelcome() {
 
 
 async function searchCourses() {
-    let yearTerm = ''
+    let yearTerm = '' // Format needed for API call
     let year = await prompt('Enter a year:')
-    if (year === '') {year = 2022} // todo for testing. Blank will throw an error
+    if (year === '') {
+        year = 2022 // todo for testing. Blank will throw an error
+    }
     const answer = await inquirer.prompt([{
         name: 'response',
         type: 'list',
@@ -97,10 +103,17 @@ async function searchCourses() {
 
     let teachingArea = await prompt('Enter a teaching area (ex. C S, HIST, etc.) Don\'t forget a space if it is needed:')
     teachingArea = teachingArea.toUpperCase() // set the user input to upper case
-    if (teachingArea === 'CS') {teachingArea = 'C S'} // in case the space was forgotten in C S
-    else if (teachingArea === '') {teachingArea = 'C S'} // todo for testing. note: a blank will cause an error
+    if (teachingArea === 'CS') {
+        teachingArea = 'C S' // in case the space was forgotten in C S
+    }
+    else if (teachingArea === '') {
+        teachingArea = 'C S' // todo for testing. Blank will throw an error
+    }
+
     let courseNumber = await prompt('Enter a course number (ex. 252, 101, etc.):')
-    if (courseNumber === '') {courseNumber = '235'} // todo for testing. Blank will cause an error
+    if (courseNumber === '') {
+        courseNumber = '235' // todo for testing. Blank will throw an error
+    }
 
     let classes = await api_calls.getClasses(yearTerm, teachingArea, courseNumber)
     if (!classes.length) {
@@ -108,7 +121,8 @@ async function searchCourses() {
         return searchCourses()
     }
 
-    return classes // return all classes found from the search
+    // return all classes found from the search
+    return classes
 }
 
 async function addRMPDataToClasses(classes) {
@@ -122,13 +136,28 @@ async function addRMPDataToClasses(classes) {
                 c.days, c.classtime, c.building, c.availableSeats, c.totalEnrolled, c.waitlisted)
 
             // take the first two words (omitting the middle name if there is one). This format is better for the search
-            const instructorSearchName = c.instructor.split(' ').slice(0,2).join(' ')
-            const teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
+            let instructorSearchName = c.instructor.split(' ').slice(0,2).join(' ')
+            let teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
             if (teachers[0]) {
                 const teacher = await ratings.getTeacher(teachers[0].id);
-                rmpClass.avgDifficulty = teacher.avgDifficulty
-                rmpClass.avgRating = teacher.avgRating
-                rmpClass.numRatings = teacher.numRatings
+                rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty
+                rmpClass.AVG_RATING = teacher.avgRating
+                rmpClass.NUM_RATINGS = teacher.numRatings
+            }
+
+            else {
+                // No teachers were returned searching that name so try again with the middle name
+                if (c.instructor.split(' ').length >= 3) {
+                    instructorSearchName = c.instructor.split(' ')[0] + ' ' + c.instructor.split(' ')[2]
+                    teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
+                }
+                if (teachers[0]) {
+                    // second try using middle name
+                    const teacher = await ratings.getTeacher(teachers[0].id);
+                    rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty
+                    rmpClass.AVG_RATING = teacher.avgRating
+                    rmpClass.NUM_RATINGS = teacher.numRatings
+                }
             }
             rmpClasses.push(rmpClass)
         } catch (e) {
@@ -161,9 +190,9 @@ async function saveClasses(rmpClasses, userBYUID) {
 
 async function viewSavedCourses(userBYUID) {
     const savedClasses = await database_functions.getSavedRmpClasses(userBYUID)
-    console.table(savedClasses.rows, ['CLASS_NAME', 'CLASS_TITLE', 'INSTRUCTOR', 'INSTRUCTION_MODE',
-        'DAYS', 'CLASSTIME', 'BUILDING', 'AVAILABLE_SEATS', 'TOTAL_ENROLLED', 'WAITLIST', 'AVG_DIFFICULTY',
-        'AVG_RATING', 'NUM_RATINGS'])
+    console.table(savedClasses.rows, ['CLASS_NAME', 'CLASS_TITLE', 'INSTRUCTOR', 'AVG_RATING',
+        'AVG_DIFFICULTY', 'INSTRUCTION_MODE', 'DAYS', 'CLASS_TIME', 'BUILDING', 'AVAILABLE_SEATS',
+        'TOTAL_ENROLLED', 'WAITLIST', 'NUM_RATINGS'])
     return savedClasses.rows
 
 }

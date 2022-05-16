@@ -69,15 +69,15 @@ async function addRmpClassToDatabase(rmpClass, userBYUID) {
     try {
         const conn = await oracle.getConnection(oracleParameters)
         await conn.execute('INSERT INTO OIT#MHM62.SAVED_RMP_CLASSES (SAVED_ID, CLASS_NAME, CLASS_TITLE, ASSOSIATED_USER_BYUID, INSTRUCTOR,' +
-            ' INSTRUCTION_MODE, DAYS, CLASSTIME, BUILDING, AVAILABLE_SEATS, TOTAL_ENROLLED, WAITLIST, AVG_DIFFICULTY, AVG_RATING, NUM_RATINGS)' +
+            ' INSTRUCTION_MODE, DAYS, CLASS_TIME, BUILDING, AVAILABLE_SEATS, TOTAL_ENROLLED, WAITLIST, AVG_DIFFICULTY, AVG_RATING, NUM_RATINGS)' +
             'VALUES (:savedID, :className, :classTitle, :assosiatedUserBYUID, :instructor, :instructionMode, :days, :classtime,' +
             ' :building, :availableSeats, :totalEnrolled, :waitlist, :avgDifficulty, :avgRating, :numRatings)',
-            [rmpClass.uuid, rmpClass.className, rmpClass.classTitle, userBYUID, rmpClass.instructor, rmpClass.instruction_mode, rmpClass.days, rmpClass.classtime,
-            rmpClass.building, rmpClass.availableSeats, rmpClass.totalEnrolled, rmpClass.waitlisted,
-            rmpClass.avgDifficulty, rmpClass.avgRating, rmpClass.numRatings])
+            [rmpClass.UUID, rmpClass.CLASS_NAME, rmpClass.CLASS_TITLE, userBYUID, rmpClass.INSTRUCTOR, rmpClass.INSTRUCTION_MODE, rmpClass.DAYS, rmpClass.CLASS_TIME,
+            rmpClass.BUILDING, rmpClass.AVAILABLE_SEATS, rmpClass.TOTAL_ENROLLED, rmpClass.WAITLIST,
+            rmpClass.AVG_DIFFICULTY, rmpClass.AVG_RATING, rmpClass.NUM_RATINGS])
 
         await conn.close()
-        console.log(`Added '${rmpClass.classTitle}' to the database`)
+        console.log(`Added '${rmpClass.CLASS_TITLE}' to the database`)
     } catch (e) {
         if (e.message.includes('unique')) {
             console.log('Class already added')
@@ -152,7 +152,7 @@ async function createTableInDatabase() {
             '    INSTRUCTOR VARCHAR2(30) NOT NULL,' +
             '    INSTRUCTION_MODE VARCHAR2(30),' +
             '    DAYS VARCHAR2(15),' +
-            '    CLASSTIME VARCHAR(15),' +
+            '    CLASS_TIME VARCHAR(15),' +
             '    BUILDING VARCHAR2(15),' +
             '    AVAILABLE_SEATS INTEGER,' +
             '    TOTAL_ENROLLED INTEGER,' +
