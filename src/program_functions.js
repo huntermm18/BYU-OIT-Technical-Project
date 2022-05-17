@@ -112,7 +112,8 @@ function printWelcome() {
  * @returns classes A list of relevant classes
  */
 async function searchCourses() {
-    let yearTerm = '' // Format needed for API call
+    // Format needed for API call
+    let yearTerm = ''
 
     // prompt the user to select a year
     let year = await selectYear()
@@ -285,7 +286,6 @@ async function removeSavedCourses(userBYUID, savedClasses) {
             console.log(`Removed class '${savedClasses[index].CLASS_TITLE}' from the database`)
 
             // print the new table and start the function over again
-            //const newSavedClasses = await viewSavedCourses(userBYUID)
             const newSavedClasses = await database_functions.getSavedRmpClasses(userBYUID)
             return removeSavedCourses(userBYUID, newSavedClasses)
         }

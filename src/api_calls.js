@@ -32,6 +32,7 @@ const classScheduleOptions = {
     }
 }
 
+
 /**
  * Tests if the user is subscribed to the APIs
  * @param byuID BYU-ID of user
@@ -103,6 +104,7 @@ async function getClasses(yearTerm, teachingArea, courseNumber) {
     }
     return classes
 }
+
 
 /**
  * Gets the relevant course numbers for the given teaching area and yearTerm
