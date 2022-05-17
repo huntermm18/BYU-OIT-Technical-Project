@@ -190,9 +190,11 @@ async function addRMPDataToClasses(classes) {
             let teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
             if (teachers[0]) {
                 const teacher = await ratings.getTeacher(teachers[0].id);
-                rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty
-                rmpClass.AVG_RATING = teacher.avgRating
-                rmpClass.NUM_RATINGS = teacher.numRatings
+                if (teacher.numRatings > 0) {
+                    rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty
+                    rmpClass.AVG_RATING = teacher.avgRating
+                    rmpClass.NUM_RATINGS = teacher.numRatings
+                }
             }
 
             else {
