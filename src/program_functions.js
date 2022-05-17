@@ -77,16 +77,19 @@ async function login() {
     console.clear()
     printWelcome()
 
-    // Get BYU ID and WSO2
-    let byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
-    if (!byuID) {byuID = '083814923'} // fixme for testing
-    let token = await prompt('Enter your WSO2 token:')
-    if (!token) {token = 'b995ce8ba755b18724b812af0785c41'} // fixme for testing
+    let byuID = ''
+    let token = ''
 
-    // Test if user is subscribed to the proper APIs and get user's name
-    const userFirstName = await api_calls.testAPIs(byuID, token)
-    console.clear()
-    console.log(`Welcome ${userFirstName}`)
+    // Get BYU ID and WSO2
+    while(!byuID) {
+        byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
+    }
+    while (!token) {
+        token = await prompt('Enter your WSO2 token:')
+    }
+
+    // Test if user is subscribed to the proper APIs
+    await api_calls.testAPIs(byuID, token)
 
     return byuID
 }
@@ -135,14 +138,19 @@ async function searchCourses() {
         console.log('No courses found under that teaching area. Restarting search.')
         return searchCourses()
     }
+    courseNumbers = Array.from(courseNumbers)
+    courseNumbers.unshift(restartText) // add a restart search option to the course numbers
     let answer = await inquirer.prompt([{
         name: 'response',
         type: 'list',
         pageSize: 20,
         message: 'Select a course number',
-        choices: Array.from(courseNumbers)
+        choices: courseNumbers
     }])
     let courseNumber = answer.response
+    if (courseNumber === restartText) {
+        return searchCourses()
+    }
 
     // Uses api_calls function to get the relevant classes
     let classes = await api_calls.getClasses(yearTerm, teachingArea, courseNumber)
