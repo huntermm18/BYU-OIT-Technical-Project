@@ -19,13 +19,12 @@ https://www.ratemyprofessors.com/
 In order to use this program you must connect to BYU's AWS. To do so:
 
 1. Go to this link and download the AWS CLI version that corresponds to your computer: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html
-2. Install the BYU AWS login by running ``pip3 install byu-awslogin``
-3. Visit [BYU's AWS Login page](https://byulogin.awsapps.com/start#/)
-4. After login, you should find the byu-org-trn app. Click on it and then click on command line or programmtic access
-5. Navigate to the "Powershell" tab and copy environmental variables
-6. Paste Powershell Environmental Variables into Powershell terminal
+2. Visit [BYU's AWS Login page](https://byulogin.awsapps.com/start#/)
+3. After login, you should find the byu-org-trn app. Click on it and then click on command line or programmatic access
+4. Navigate to the "Powershell" tab (or whichever tab corresponds to the environment you are using) and copy environmental variables
+5. Paste the Environmental Variables into your terminal or commandline
 
-### Connect to VPN
+### Connect to VPN (No longer needed)
 
 1. Download the [GlobalProtect App](https://vpn.byu.edu/global-protect/getsoftwarepage.esp)
 2. Open the GlobalProtect app
@@ -48,7 +47,7 @@ In order to use this program you must connect to BYU's AWS. To do so:
 3. Exit Program
 
 ### Search Courses
-1. Enter the year of the semester for which you would to search courses (ex. 2022, 2020, etc.)
+1. Select from the list a year for which you would to search courses or select 'Enter another year'
 2. Select a semester or term from the list
 3. Select a teaching area from the list or choose 'Enter manually'
 4. Select a course number from the list

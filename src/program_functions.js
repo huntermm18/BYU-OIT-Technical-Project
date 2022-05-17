@@ -88,8 +88,10 @@ async function login() {
         token = await prompt('Enter your WSO2 token:')
     }
 
-    // Test if user is subscribed to the proper APIs
-    await api_calls.testAPIs(byuID, token)
+    // Test if user is subscribed to the proper APIs and get user's name
+    const userFirstName = await api_calls.testAPIs(byuID, token)
+    console.clear()
+    console.log(`Welcome ${userFirstName}`)
 
     return byuID
 }
