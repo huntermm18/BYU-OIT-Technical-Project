@@ -99,6 +99,7 @@ async function addRmpClassToDatabase(rmpCourse, userBYUID) {
             ', CLASS_NAME' +
             ', CLASS_TITLE' +
             ', ASSOSIATED_USER_BYUID' +
+            ', SECTION' +
             ', INSTRUCTOR' +
             ', INSTRUCTION_MODE' +
             ', DAYS, CLASS_TIME' +
@@ -115,6 +116,7 @@ async function addRmpClassToDatabase(rmpCourse, userBYUID) {
             ', :className' +
             ', :classTitle' +
             ', :assosiatedUserBYUID' +
+            ', :section' +
             ', :instructor' +
             ', :instructionMode' +
             ', :days' +
@@ -131,6 +133,7 @@ async function addRmpClassToDatabase(rmpCourse, userBYUID) {
                 , rmpCourse.CLASS_NAME
                 , rmpCourse.CLASS_TITLE
                 , userBYUID
+                , rmpCourse.SECTION
                 , rmpCourse.INSTRUCTOR
                 , rmpCourse.INSTRUCTION_MODE
                 , rmpCourse.DAYS
@@ -156,7 +159,7 @@ async function addRmpClassToDatabase(rmpCourse, userBYUID) {
             return addRmpClassToDatabase(rmpCourse, userBYUID)
         }
         else {
-            console.log(e)
+            console.log(e.stack)
         }
     }
 }
@@ -201,6 +204,26 @@ async function removeRmpClassFromDatabase(uuid) {
     return true
 }
 
+
+/**
+ * Removes all saved courses for a specified user
+ * @param byuID
+ * @returns boolean
+ */
+async function removeAllClassesForUser(byuID) {
+    try {
+        const conn = await oracle.getConnection(oracleParameters)
+        await conn.execute(`DELETE FROM OIT#MHM62.SAVED_RMP_CLASSES WHERE ASSOSIATED_USER_BYUID = :byuID`, [byuID])
+        await conn.close()
+    } catch (e) {
+        await testOracleConnectivity()
+        console.log(e.stack)
+        return false
+    }
+    return true
+}
+
+
 /**
  * Clears and rebuilds the table in the database (for dev use)
  * @param none
@@ -235,6 +258,7 @@ async function createTableInDatabase() {
             '    CLASS_NAME VARCHAR2(30),' +
             '    CLASS_TITLE VARCHAR2(35),' +
             '    ASSOSIATED_USER_BYUID VARCHAR2(10) NOT NULL,' +
+            '    SECTION VARCHAR2(5),' +
             '    INSTRUCTOR VARCHAR2(30) NOT NULL,' +
             '    INSTRUCTION_MODE VARCHAR2(30),' +
             '    DAYS VARCHAR2(15),' +
@@ -257,4 +281,4 @@ async function createTableInDatabase() {
 
 
 module.exports = {addRmpClassToDatabase, getSavedRmpClasses, removeRmpClassFromDatabase,
-    clearAndRebuildDatabase, getOracleCredentials, testOracleConnectivity}
+    clearAndRebuildDatabase, getOracleCredentials, testOracleConnectivity, removeAllClassesForUser}

@@ -21,10 +21,12 @@ const restartText = 'Restart Search'
  * @returns none
  */
 class rmpCourse {
-    constructor(className, classTitle, instructor, instructionMode, days, classtime, building, availableSeats, totalEnrolled, waitlisted) {
+    constructor(className, classTitle, section, instructor, instructionMode, days, classtime,
+                building, availableSeats, totalEnrolled, waitlisted) {
         this.UUID = UUID.v4()
         this.CLASS_NAME = className
         this.CLASS_TITLE = classTitle
+        this.SECTION = section
         this.INSTRUCTOR = instructor
         this.INSTRUCTION_MODE = instructionMode
         this.DAYS = days
@@ -73,19 +75,16 @@ async function login() {
     console.clear()
     printWelcome()
 
-    let byuID = ''
-    let token = ''
-
     // Get BYU ID and WSO2
-    while(!byuID) {
-        byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
-    }
-    while (!token) {
-        token = await prompt('Enter your WSO2 token:')
-    }
+    let byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
+    if (!byuID) {byuID = '083814923'} // fixme for testing
+    let token = await prompt('Enter your WSO2 token:')
+    if (!token) {token = 'b995ce8ba755b18724b812af0785c41'} // fixme for testing
 
-    // Test if user is subscribed to the proper APIs
-    await api_calls.testAPIs(byuID, token)
+    // Test if user is subscribed to the proper APIs and get user's name
+    const userFirstName = await api_calls.testAPIs(byuID, token)
+    console.clear()
+    console.log(`Welcome ${userFirstName}`)
 
     return byuID
 }
@@ -129,6 +128,10 @@ async function searchCourses() {
 
     // Generate a list of relevant course numbers for the selected teaching area and yearTerm
     let courseNumbers = await api_calls.getCourseNumbers(yearTerm, teachingArea)
+    if (courseNumbers.size === 0) {
+        console.log('No courses found under that teaching area. Restarting search.')
+        return searchCourses()
+    }
     let answer = await inquirer.prompt([{
         name: 'response',
         type: 'list',
@@ -166,7 +169,7 @@ async function addRMPDataToClasses(classes) {
         try{
             let c = classes[i]
             let className = c.className.match(/\D*\d\d\d\S*/gm) // use regex to pull out the important part of className
-            let rmpClass = new rmpCourse(className[0], c.classTitle, c.instructor, c.instruction_mode,
+            let rmpClass = new rmpCourse(className[0], c.classTitle, c.link_cls10, c.instructor, c.instruction_mode,
                 c.days, c.classtime, c.building, c.availableSeats, c.totalEnrolled, c.waitlisted)
 
             // take the first two words (omitting the middle name if there is one). This format is better for the search
@@ -237,12 +240,30 @@ async function saveClasses(rmpClasses, userBYUID) {
  */
 async function viewSavedCourses(userBYUID) {
     const savedClasses = await database_functions.getSavedRmpClasses(userBYUID)
-    console.table(savedClasses.rows, ['CLASS_NAME', 'CLASS_TITLE', 'INSTRUCTOR', 'AVG_RATING', 'NUM_RATINGS',
-        'AVG_DIFFICULTY', 'INSTRUCTION_MODE', 'DAYS', 'CLASS_TIME', 'BUILDING', 'AVAILABLE_SEATS',
-        'TOTAL_ENROLLED', 'WAITLIST'])
+    if (savedClasses.rows.length) {
+        console.table(savedClasses.rows, [
+            'CLASS_NAME',
+            'CLASS_TITLE',
+            'SECTION',
+            'INSTRUCTOR',
+            'AVG_RATING',
+            'NUM_RATINGS',
+            'AVG_DIFFICULTY',
+            'INSTRUCTION_MODE',
+            'DAYS', 'CLASS_TIME',
+            'BUILDING',
+            'AVAILABLE_SEATS',
+            'TOTAL_ENROLLED',
+            'WAITLIST'])
+    }
+    else {
+        console.log('\nNo courses to display\n')
+    }
+
     return savedClasses.rows
 
 }
+
 
 /**
  * Provides the user a chance to remove saved courses from their list of saved courses
@@ -543,7 +564,7 @@ async function selectTeachingArea() {
             console.log('C S used')
             teachingArea = 'C S'
         }
-        return teachingArea
+        return teachingArea.toUpperCase()
     }
     return answer.response
 }

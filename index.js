@@ -45,15 +45,37 @@ async function main() {
             if (rmpClasses.length > 0) {
                 console.log(rmpClasses[0].CLASS_NAME + ' ' + rmpClasses[0].CLASS_TITLE)
             }
-            console.table(rmpClasses, ['INSTRUCTOR', 'AVG_RATING', 'AVG_DIFFICULTY',
-                'NUM_RATINGS', 'INSTRUCTION_MODE', 'DAYS', 'CLASS_TIME', 'BUILDING', 'AVAILABLE_SEATS',
-                'TOTAL_ENROLLED', 'WAITLIST'])
+            console.table(rmpClasses, [
+                'SECTION',
+                'INSTRUCTOR',
+                'AVG_RATING',
+                'AVG_DIFFICULTY',
+                'NUM_RATINGS',
+                'INSTRUCTION_MODE',
+                'DAYS', 'CLASS_TIME',
+                'BUILDING',
+                'AVAILABLE_SEATS',
+                'TOTAL_ENROLLED',
+                'WAITLIST'])
             await pf.saveClasses(rmpClasses, userBYUID)
         }
         else if (choice === 2) {
             // View saved courses option
             const savedClasses = await pf.viewSavedCourses(userBYUID)
-            await pf.removeSavedCourses(userBYUID, savedClasses)
+            const response = await promptSaveClassesMenu()
+            if (response === 1) {
+                // Return to Main Manu
+                choice = await promptMenu()
+                continue
+            }
+            else if (response === 2) {
+                // Select Courses to Remove
+                await pf.removeSavedCourses(userBYUID, savedClasses)
+            }
+            else if (response === 3) {
+                // Remove All
+                df.removeAllClassesForUser(userBYUID)
+            }
         }
         console.clear()
         choice = await promptMenu()
@@ -83,5 +105,25 @@ async function promptMenu() {
             console.clear()
             console.log('Thanks for using')
             process.exit()
+    }
+}
+
+
+async function promptSaveClassesMenu() {
+    const answer = await inquirer.prompt([{
+        name: 'response',
+        type: 'list',
+        pageSize: 3,
+        message: 'What would you like to do?',
+        choices: ['1) Return to Main Menu', '2) Select Courses to Remove', '3) Remove All']
+    }])
+
+    switch (answer.response) {
+        case '1) Return to Main Menu':
+            return 1
+        case '2) Select Courses to Remove':
+            return 2
+        case '3) Remove All':
+            return 3
     }
 }
