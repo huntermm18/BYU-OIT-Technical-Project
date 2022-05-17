@@ -24,6 +24,8 @@ In order to use this program you must connect to BYU's AWS. To do so:
 4. Navigate to the "Powershell" tab (or whichever tab corresponds to the environment you are using) and copy environmental variables
 5. Paste the Environmental Variables into your terminal or commandline
 
+* See offline option in 'Notes' for a version that doesn't connect to the database if needed
+
 ### Connect to VPN (No longer needed)
 
 1. Download the [GlobalProtect App](https://vpn.byu.edu/global-protect/getsoftwarepage.esp)
@@ -59,3 +61,7 @@ In order to use this program you must connect to BYU's AWS. To do so:
 1. This option will present a table with all the courses you have previously saved from the 'Search Courses' section
 2. From here you can return to the main menu, see your saved courses in a sorted view, remove courses from your saved list, or clear all your saved courses
 * Note: Sorting your saved courses only provides a temporary view, and the original order will be restored when you exit
+
+
+## Notes
+* There is an option for using without database access if you run the 'index_no_database.js' file in the 'dev_noes' directory. API subscription keys are still needed.
