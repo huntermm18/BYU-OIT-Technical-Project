@@ -50,12 +50,13 @@ In order to use this program you must connect to BYU's AWS. To do so:
 ### Search Courses
 1. Enter the year of the semester for which you would to search courses (ex. 2022, 2020, etc.)
 2. Select a semester or term from the list
-3. Enter a teaching area such as 'C S' or 'MATH'
-4. Enter a course number such as '101' or '142'
+3. Select a teaching area from the list or choose 'Enter manually'
+4. Select a course number from the list
 5. A table with the available classes will be displayed and will include information from rate-my-professor
-6. From here you can enter the table indexes (one at a time) of any courses you would like to save, or just press enter to return to the menu
+6. From here you can return to the main menu, sort the results, or select courses to save for viewing later
 
 
 ### View Saved Courses
 1. This option will present a table with all the courses you have previously saved from the 'Search Courses' section
-2. You can enter the table indexes (one at a time) of any course you would like to remove from the list, or just press enter to return to the menu
+2. From here you can return to the main menu, see your saved courses in a sorted view, remove courses from your saved list, or clear all your saved courses
+* Note: Sorting your saved courses only provides a temporary view, and the original order will be restored when you exit
