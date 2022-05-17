@@ -141,7 +141,8 @@ async function searchCourses() {
         return searchCourses()
     }
     courseNumbers = Array.from(courseNumbers)
-    courseNumbers.unshift(restartText) // add a restart search option to the course numbers
+    // add a restart search option to the course numbers
+    courseNumbers.unshift(restartText)
     let answer = await inquirer.prompt([{
         name: 'response',
         type: 'list',
@@ -181,7 +182,8 @@ async function addRMPDataToClasses(classes) {
     for (let i = 0; i < classes.length; i++) {
         try{
             let c = classes[i]
-            let className = c.className.match(/\D*\d\d\d\S*/gm) // use regex to pull out the important part of className
+            // use regex to pull out the important part of className
+            let className = c.className.match(/\D*\d\d\d\S*/gm)
             let rmpClass = new rmpCourse(className[0], c.classTitle, c.link_cls10, c.instructor, c.instruction_mode,
                 c.days, c.classtime, c.building, c.availableSeats, c.totalEnrolled, c.waitlisted)
 
@@ -218,8 +220,12 @@ async function addRMPDataToClasses(classes) {
         } catch (e) {
             if (e.message.includes('EADDRINUSE')) {
                 console.log('EADDRINUSE error caught. Running command \'taskkill /im node.exe /F\' to attempt to work around.')
-                exec("taskkill /im node.exe /F") // command to hopefully fix the EADDRINUSE error
-                return addRMPDataToClasses(classes) // attempt to restart the function
+
+                // command to hopefully fix the EADDRINUSE error
+                exec("taskkill /im node.exe /F")
+
+                // attempt to restart the function
+                return addRMPDataToClasses(classes)
             }
         }
     }
@@ -438,7 +444,8 @@ async function selectYear() {
         let year = await prompt('Enter a year:')
         if (year === '') {
             console.log('current year used')
-            return currYear // Default value. Blank will throw an error
+            // Default value. Blank will throw an error
+            return currYear
         }
         return year
     }
