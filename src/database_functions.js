@@ -1,7 +1,7 @@
 /**
  * @file Handles the database functions
  * @author Hunter Madsen
- * last modified: 5/16/2022
+ * last modified: 5/17/2022
  */
 
 
@@ -174,7 +174,7 @@ async function getSavedRmpClasses(userBYUID) {
         const conn = await oracle.getConnection(oracleParameters)
         let result = await conn.execute(`SELECT * FROM OIT#MHM62.SAVED_RMP_CLASSES WHERE ASSOSIATED_USER_BYUID = :userBYUID`, [userBYUID])
         await conn.close()
-        return result
+        return result.rows
     } catch (e) {
         if (e.message.includes('table or view does not exist')) {
             // Rebuilds the table if it has been destroyed

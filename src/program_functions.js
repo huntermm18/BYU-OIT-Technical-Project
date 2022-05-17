@@ -1,7 +1,7 @@
 /**
  * @file Stores many of the main functions used throughout the program
  * @author Hunter Madsen
- * last modified: 5/16/2022
+ * last modified: 5/17/2022
  */
 
 
@@ -52,6 +52,7 @@ class rmpCourse {
     }
 }
 
+
 /**
  * Simple function to prompt the user with a message and get a response
  * @param message
@@ -65,6 +66,7 @@ async function prompt(message) {
     }])
     return answer.userInput
 }
+
 
 /**
  * Logs in the user
@@ -97,6 +99,7 @@ async function login() {
 function printWelcome() {
     console.log('Welcome to the BYU course searcher with Rate-My-Professor data')
 }
+
 
 /**
  * Takes parameters from the user and searches for relevant courses
@@ -135,7 +138,7 @@ async function searchCourses() {
     let answer = await inquirer.prompt([{
         name: 'response',
         type: 'list',
-        pageSize: 30,
+        pageSize: 20,
         message: 'Select a course number',
         choices: Array.from(courseNumbers)
     }])
@@ -212,6 +215,7 @@ async function addRMPDataToClasses(classes) {
     return rmpClasses
 }
 
+
 /**
  * Prompts the user to enter the indexes of the classes they would like to save into the database and then saves them
  * @param rmpClasses
@@ -233,37 +237,6 @@ async function saveClasses(rmpClasses, userBYUID) {
     }
 }
 
-/**
- * Prints a table of previously saved courses
- * @param userBYUID
- * @returns A list of saved classes associated with the current userBYUID pulled from the database
- */
-async function viewSavedCourses(userBYUID) {
-    const savedClasses = await database_functions.getSavedRmpClasses(userBYUID)
-    if (savedClasses.rows.length) {
-        console.table(savedClasses.rows, [
-            'CLASS_NAME',
-            'CLASS_TITLE',
-            'SECTION',
-            'INSTRUCTOR',
-            'AVG_RATING',
-            'NUM_RATINGS',
-            'AVG_DIFFICULTY',
-            'INSTRUCTION_MODE',
-            'DAYS', 'CLASS_TIME',
-            'BUILDING',
-            'AVAILABLE_SEATS',
-            'TOTAL_ENROLLED',
-            'WAITLIST'])
-    }
-    else {
-        console.log('\nNo courses to display\n')
-    }
-
-    return savedClasses.rows
-
-}
-
 
 /**
  * Provides the user a chance to remove saved courses from their list of saved courses
@@ -272,6 +245,8 @@ async function viewSavedCourses(userBYUID) {
  * @returns none
  */
 async function removeSavedCourses(userBYUID, savedClasses) {
+    console.clear()
+    printClassesFull(savedClasses)
     const promptMessage = 'Enter the index of a class you would like to remove or leave blank to return to the menu'
     let index = await prompt(promptMessage)
     while (index === 0 || index) {
@@ -292,7 +267,8 @@ async function removeSavedCourses(userBYUID, savedClasses) {
             console.log(`Removed class '${savedClasses[index].CLASS_TITLE}' from the database`)
 
             // print the new table and start the function over again
-            const newSavedClasses = await viewSavedCourses(userBYUID)
+            //const newSavedClasses = await viewSavedCourses(userBYUID)
+            const newSavedClasses = await database_functions.getSavedRmpClasses(userBYUID)
             return removeSavedCourses(userBYUID, newSavedClasses)
         }
         else {
@@ -300,6 +276,134 @@ async function removeSavedCourses(userBYUID, savedClasses) {
         }
         index = await prompt(promptMessage)
     }
+}
+
+
+/**
+ * Provides sorting options and sorts the list of rmpCourses it is passed
+ * @param rmpCourses
+ * @return none
+ */
+async function sortCourses(rmpCourses) {
+    console.clear()
+    let answer = await inquirer.prompt([{
+        name: 'response',
+        type: 'list',
+        pageSize: 5,
+        message: 'How would you like to sort?',
+        choices: [
+            '1) Sort by section number',
+            '2) Sort RMP ratings (highest to lowest)',
+            '3) Sort by RMP difficulty (lowest to highest)',
+            '4) Sort by time (earliest to latest)']
+    }])
+
+    switch (answer.response) {
+        case '1) Sort by section number':
+            rmpCourses.sort((a, b) => {
+                if (a.SECTION <= b.SECTION) {
+                    return -1 // sort a before b
+                }
+                return 1
+            })
+            break
+        case '2) Sort RMP ratings (highest to lowest)':
+            rmpCourses.sort((a, b) => {
+                if (a.AVG_RATING >= b.AVG_RATING) {
+                    return -1 // sort a before b
+                }
+                return 1
+            })
+            break
+        case '3) Sort by RMP difficulty (lowest to highest)':
+            rmpCourses.sort((a, b) => {
+                if (a.AVG_DIFFICULTY <= b.AVG_DIFFICULTY) {
+                    return -1 // sort a before b
+                }
+                return 1
+            })
+            break
+        case '4) Sort by time (earliest to latest)':
+            rmpCourses.sort((a, b) => {
+                const breaks = 0
+                if (b.CLASS_TIME === 'N/A') {
+                    return -1
+                }
+                else if (a.CLASS_TIME === 'N/A') {
+                    return 1
+                }
+                if (a.CLASS_TIME.includes('a') && b.CLASS_TIME.includes('p')) {
+                    return -1
+                }
+                else if (a.CLASS_TIME.includes('p') && b.CLASS_TIME.includes('a')) {
+                    return 1
+                }
+                else {
+                    let aTime = a.CLASS_TIME.split(':')
+                    let bTime = b.CLASS_TIME.split(':')
+                    if (parseInt(aTime[0]) < parseInt(bTime[0])) {
+                        return -1
+                    }
+                    else if (parseInt(aTime[0]) > parseInt(bTime[0])) {
+                        return 1
+                    }
+                    else {
+                        // hours are equal so check min
+                        if (parseInt(aTime[1].charAt(0)) <= parseInt(bTime[1].charAt(0))) {
+                            return -1
+                        }
+                        return 1
+                    }
+                }
+            })
+            break
+    }
+}
+
+
+/**
+ * Prints a list of rmpClasses to a table without CLASS_NAME or CLASS_TITLE
+ * @param rmpClasses
+ * @returns none
+ */
+function printClasses(rmpClasses) {
+    console.table(rmpClasses, [
+        'SECTION',
+        'INSTRUCTOR',
+        'AVG_RATING',
+        'AVG_DIFFICULTY',
+        'NUM_RATINGS',
+        'INSTRUCTION_MODE',
+        'DAYS',
+        'CLASS_TIME',
+        'BUILDING',
+        'AVAILABLE_SEATS',
+        'TOTAL_ENROLLED',
+        'WAITLIST'])
+}
+
+
+/**
+ * Prints a list of rmpClasses to a table
+ * @param rmpClasses
+ * @returns none
+ */
+function printClassesFull(rmpClasses) {
+    console.table(rmpClasses, [
+        'CLASS_NAME',
+        'CLASS_TITLE',
+        'SECTION',
+        'INSTRUCTOR',
+        'AVG_RATING',
+        'AVG_DIFFICULTY',
+        'NUM_RATINGS',
+        'INSTRUCTION_MODE',
+        'DAYS',
+        'CLASS_TIME',
+        'BUILDING',
+        'AVAILABLE_SEATS',
+        'TOTAL_ENROLLED',
+        'WAITLIST'])
 }
 
 
@@ -553,7 +657,7 @@ async function selectTeachingArea() {
     let answer = await inquirer.prompt([{
         name: 'response',
         type: 'list',
-        pageSize: 30,
+        pageSize: 20,
         message: 'Select a Teaching Area',
         choices: teachingAreasArr
     }])
@@ -571,4 +675,5 @@ async function selectTeachingArea() {
 
 
 
-module.exports = {login, searchCourses, viewSavedCourses, addRMPDataToClasses, saveClasses, removeSavedCourses}
+module.exports = {login, searchCourses, addRMPDataToClasses,
+    saveClasses, removeSavedCourses, sortCourses, printClasses, printClassesFull}
