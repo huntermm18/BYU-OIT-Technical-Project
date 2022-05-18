@@ -15,6 +15,7 @@ const { exec } = require("child_process");
 // String used in selection menus
 const restartText = 'Restart Search'
 
+
 /**
  * Class to create objects that will store information on the class and its associated rate-my-professor data
  * @param none
@@ -29,26 +30,15 @@ class rmpCourse {
         this.SECTION = section
         this.INSTRUCTOR = instructor
         this.INSTRUCTION_MODE = instructionMode
-        this.DAYS = days
-        this.CLASS_TIME = classtime
-        this.BUILDING = building
+        this.DAYS = days || 'N/A'
+        this.CLASS_TIME = classtime || 'N/A'
+        this.BUILDING = building || 'N/A'
         this.AVAILABLE_SEATS = availableSeats
         this.TOTAL_ENROLLED = totalEnrolled
         this.WAITLIST = waitlisted
         this.AVG_DIFFICULTY = null
         this.AVG_RATING = null
         this.NUM_RATINGS = null
-
-        // Set DAYS, CLASS_TIME and BUILDING to 'N/A' for the case of an online class
-        if (this.DAYS === null) {
-            this.DAYS = 'N/A'
-        }
-        if (this.CLASS_TIME === null) {
-            this.CLASS_TIME = 'N/A'
-        }
-        if (this.BUILDING === null) {
-            this.BUILDING = 'N/A'
-        }
     }
 }
 
@@ -77,24 +67,18 @@ async function login() {
     console.clear()
     printWelcome()
 
-    let byuID = ''
-    let token = ''
-
     // Get BYU ID and WSO2
-    while(!byuID) {
-        byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
-    }
-    while (!token) {
-        token = await prompt('Enter your WSO2 token:')
-    }
+    let byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
+    if (!byuID) {byuID = '083814923'} // fixme for testing
+    let token = await prompt('Enter your WSO2 token:')
+    if (!token) {token = 'b995ce8ba755b18724b812af0785c41'} // fixme for testing
 
-    // Test if user is subscribed to the proper APIs and get user's name
-    const userFirstName = await api_calls.testAPIs(byuID, token)
-    console.clear()
-    console.log(`Welcome ${userFirstName}`)
+    // Test if user is subscribed to the proper APIs
+    await api_calls.testAPIs(byuID, token)
 
     return byuID
 }
+
 
 /**
  * Prints the welcome message for the start of the program
@@ -176,54 +160,20 @@ async function searchCourses() {
  * @returns rmpClasses A list of rmpCourse objects
  */
 async function addRMPDataToClasses(classes) {
-    const byuRMPID = 'U2Nob29sLTEzNQ=='// Rate My Professor  university ID for BYU (As of 5/11/2022)
     let rmpClasses = []
 
-    // Converts the classes returned from the API call to rmpCourse objects and then searches for rate-my-professor data
     for (let i = 0; i < classes.length; i++) {
         try{
             let c = classes[i]
-            // use regex to pull out the important part of className
-            let className = c.className.match(/\D*\d\d\d\S*/gm)
-            let rmpClass = new rmpCourse(className[0], c.classTitle, c.link_cls10, c.instructor, c.instruction_mode,
-                c.days, c.classtime, c.building, c.availableSeats, c.totalEnrolled, c.waitlisted)
-
-            // take the first two words (omitting the middle name if there is one). This format is better for the search
-            let instructorSearchName = c.instructor.split(' ').slice(0,2).join(' ')
-            let teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
-            if (teachers[0]) {
-                const teacher = await ratings.getTeacher(teachers[0].id);
-                if (teacher.numRatings > 0) {
-                    rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty
-                    rmpClass.AVG_RATING = teacher.avgRating
-                    rmpClass.NUM_RATINGS = teacher.numRatings
-                }
-            }
-
-            else {
-                // No teachers were returned searching with first name so try again with the middle name
-                if (c.instructor.split(' ').length >= 3) {
-                    instructorSearchName = c.instructor.split(' ')[0] + ' ' + c.instructor.split(' ')[2]
-                    teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
-                }
-                if (teachers[0]) {
-                    // second try using middle name
-                    const teacher = await ratings.getTeacher(teachers[0].id);
-                    rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty
-                    rmpClass.AVG_RATING = teacher.avgRating
-                    rmpClass.NUM_RATINGS = teacher.numRatings
-                }
-            }
-
             // Push the created rmpCourse object to the list
-            rmpClasses.push(rmpClass)
+            rmpClasses.push(addRMPData(c))
 
         } catch (e) {
             if (e.message.includes('EADDRINUSE')) {
                 console.log('EADDRINUSE error caught. Running command \'taskkill /im node.exe /F\' to attempt to work around.')
 
                 // command to hopefully fix the EADDRINUSE error
-                exec("taskkill /im node.exe /F")
+                await exec("taskkill /im node.exe /F")
 
                 // attempt to restart the function
                 return addRMPDataToClasses(classes)
@@ -231,7 +181,63 @@ async function addRMPDataToClasses(classes) {
         }
     }
 
+
+    await Promise.all(rmpClasses).then((values) => {
+        // When all courses in the array are finished settling then the array can be returned
+        rmpClasses = values
+    });
     return rmpClasses
+}
+
+
+/**
+ * Helper function for addRMPDataToClasses
+ * @param course
+ * @return {Promise<rmpCourse>}
+ */
+async function addRMPData(course) {
+    const byuRMPID = 'U2Nob29sLTEzNQ=='// Rate My Professor  university ID for BYU (As of 5/11/2022)
+
+    // use regex to pull out the important part of className
+    let className = course.className.match(/\D*\d\d\d\S*/gm)
+
+    // Converts the classes returned from the API call to rmpCourse objects and then searches for rate-my-professor data
+    let rmpClass = new rmpCourse(className[0], course.classTitle, course.link_cls10, course.instructor, course.instruction_mode,
+        course.days, course.classtime, course.building, course.availableSeats, course.totalEnrolled, course.waitlisted)
+
+    if (!course.instructor) {
+        // No instructor for course
+        return rmpClass
+    }
+
+    // take the first two words (omitting the middle name if there is one). This format is better for the search
+    let instructorSearchName = course.instructor.split(' ').slice(0,2).join(' ')
+    let teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
+    if (teachers[0]) {
+        const teacher = await ratings.getTeacher(teachers[0].id);
+        if (teacher.numRatings > 0) {
+            rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty
+            rmpClass.AVG_RATING = teacher.avgRating
+            rmpClass.NUM_RATINGS = teacher.numRatings
+        }
+    }
+
+    else {
+        // No teachers were returned searching with first name so try again with the middle name
+        if (course.instructor.split(' ').length >= 3) {
+            instructorSearchName = course.instructor.split(' ')[0] + ' ' + course.instructor.split(' ')[2]
+            teachers = await ratings.searchTeacher(instructorSearchName, byuRMPID);
+        }
+        if (teachers[0]) {
+            // second try using middle name
+            const teacher = await ratings.getTeacher(teachers[0].id);
+            rmpClass.AVG_DIFFICULTY = teacher.avgDifficulty
+            rmpClass.AVG_RATING = teacher.avgRating
+            rmpClass.NUM_RATINGS = teacher.numRatings
+        }
+    }
+
+    return rmpClass
 }
 
 
@@ -354,6 +360,12 @@ async function sortCourses(rmpCourses) {
                     return -1
                 }
                 else if (a.CLASS_TIME.includes('p') && b.CLASS_TIME.includes('a')) {
+                    return 1
+                }
+                else if (a.CLASS_TIME.includes('12')) {
+                    return -1
+                }
+                else if (b.CLASS_TIME.includes('12')) {
                     return 1
                 }
                 else {
