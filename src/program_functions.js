@@ -67,14 +67,21 @@ async function login() {
     console.clear()
     printWelcome()
 
-    // Get BYU ID and WSO2
-    let byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
-    if (!byuID) {byuID = '083814923'} // fixme for testing
-    let token = await prompt('Enter your WSO2 token:')
-    if (!token) {token = 'b995ce8ba755b18724b812af0785c41'} // fixme for testing
+    let byuID = ''
+    let token = ''
 
-    // Test if user is subscribed to the proper APIs
-    await api_calls.testAPIs(byuID, token)
+    // Get BYU ID and WSO2
+    while(!byuID) {
+        byuID = await prompt('Enter your BYU-ID (ex. 123456789):')
+    }
+    while (!token) {
+        token = await prompt('Enter your WSO2 token:')
+    }
+
+    // Test if user is subscribed to the proper APIs and get user's name
+    const userFirstName = await api_calls.testAPIs(byuID, token)
+    console.clear()
+    console.log(`Welcome ${userFirstName}`)
 
     return byuID
 }
